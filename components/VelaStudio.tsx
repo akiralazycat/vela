@@ -36,9 +36,9 @@ export function VelaStudio() {
     theme,
   }, null, 2), [protocol, theme]);
 
-  const patchTheme = <K extends keyof VelaTheme>(key: K, value: VelaTheme[K]) => {
+  function patchTheme<K extends keyof VelaTheme>(key: K, value: VelaTheme[K]) {
     setTheme((current) => ({ ...current, [key]: value }));
-  };
+  }
 
   const copyConfig = async () => {
     await navigator.clipboard?.writeText(config);
