@@ -1,23 +1,75 @@
 "use client";
 
 import {
+  forwardRef,
   type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   useCallback,
   useEffect,
+  useImperativeHandle,
   useMemo,
   useRef,
   useState,
 } from "react";
+import { findThumbnailCue, loadThumbnailVtt, type ThumbnailCue } from "@/lib/thumbnail-vtt";
 
-type VelaPlayerProps = {
+export type VelaSourceType = "auto" | "hls" | "dash" | "mp4";
+
+export type VelaTextTrack = {
   src: string;
+  language: string;
+  label: string;
+  kind?: "subtitles" | "captions";
+  mimeType?: string;
+  default?: boolean;
+};
+
+export type VelaTheme = {
+  accent: string;
+  surface: string;
+  foreground: string;
+  muted: string;
+  radius: number;
+  blur: number;
+  controlsOpacity: number;
+};
+
+export type VelaPlayerState = {
+  currentTime: number;
+  duration: number;
+  paused: boolean;
+  volume: number;
+  muted: boolean;
+  quality: "auto" | number;
+  textTrack: "off" | string;
+  sourceType: Exclude<VelaSourceType, "auto">;
+};
+
+export type VelaPlayerHandle = {
+  play: () => Promise<void>;
+  pause: () => void;
+  seek: (time: number) => void;
+  setVolume: (volume: number) => void;
+  setQuality: (quality: "auto" | number) => void;
+  setTextTrack: (track: "off" | string) => void;
+  getState: () => VelaPlayerState;
+};
+
+export type VelaPlayerProps = {
+  src: string;
+  sourceType?: VelaSourceType;
   poster?: string;
   title?: string;
   eyebrow?: string;
   accent?: string;
   captionsSrc?: string;
+  textTracks?: VelaTextTrack[];
+  thumbnailVtt?: string;
+  theme?: Partial<VelaTheme>;
+  autoPlay?: boolean;
+  onReady?: () => void;
+  onStateChange?: (state: VelaPlayerState) => void;
 };
 
 type IconName =
@@ -31,7 +83,72 @@ type IconName =
   | "fullscreen"
   | "settings";
 
+type AdaptiveTrack = {
+  id: number;
+  active: boolean;
+  bandwidth: number;
+  language: string;
+  label: string | null;
+  height: number | null;
+  width: number | null;
+  kind?: string | null;
+};
+
+type AdaptivePlayer = {
+  attach: (video: HTMLMediaElement) => Promise<void>;
+  load: (uri: string, startTime?: number, mimeType?: string) => Promise<void>;
+  destroy: () => Promise<void>;
+  configure: (config: Record<string, unknown>) => void;
+  addEventListener: (type: string, listener: EventListener) => void;
+  getVariantTracks: () => AdaptiveTrack[];
+  selectVariantTrack: (track: AdaptiveTrack, clearBuffer?: boolean) => void;
+  getTextTracks: () => AdaptiveTrack[];
+  selectTextTrack: (track: AdaptiveTrack) => void;
+  setTextTrackVisibility: (visible: boolean) => void;
+  addTextTrackAsync: (
+    uri: string,
+    language: string,
+    kind?: string,
+    mimeType?: string,
+    codecs?: string,
+  ) => Promise<unknown>;
+};
+
+type ShakaNamespace = {
+  polyfill: { installAll: () => void };
+  Player: {
+    new (): AdaptivePlayer;
+    isBrowserSupported?: () => boolean;
+  };
+};
+
+type QualityOption = { height: number; bandwidth: number; track: AdaptiveTrack };
+type TextOption = { id: string; label: string; language: string; track?: AdaptiveTrack; nativeIndex?: number };
+
 const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
+const defaultTheme: VelaTheme = {
+  accent: "#d8ff62",
+  surface: "#080908",
+  foreground: "#ffffff",
+  muted: "#a5a79f",
+  radius: 0,
+  blur: 18,
+  controlsOpacity: 0.76,
+};
+
+function detectSourceType(src: string, requested: VelaSourceType): Exclude<VelaSourceType, "auto"> {
+  if (requested !== "auto") return requested;
+  const clean = src.toLowerCase().split("?")[0];
+  if (clean.endsWith(".m3u8")) return "hls";
+  if (clean.endsWith(".mpd")) return "dash";
+  return "mp4";
+}
+
+function sourceMime(type: Exclude<VelaSourceType, "auto">) {
+  if (type === "hls") return "application/x-mpegurl";
+  if (type === "dash") return "application/dash+xml";
+  return "video/mp4";
+}
 
 function formatTime(value: number) {
   if (!Number.isFinite(value)) return "0:00";
@@ -68,36 +185,85 @@ function Icon({ name }: { name: IconName }) {
   return <svg {...common}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06-2.91 2.91-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.4 1.08V21h-4v-.08A1.65 1.65 0 0 0 8.6 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06-2.91-2.91.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.08-.4H3v-4h.08A1.65 1.65 0 0 0 4.6 8.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06 2.91-2.91.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .4-1.08V3h4v.08A1.65 1.65 0 0 0 15.4 4a1.65 1.65 0 0 0 1.82-.33l.06-.06 2.91 2.91-.06.06A1.65 1.65 0 0 0 19.4 9c.37.22.7.55.92.92.22.38.36.8.4 1.24H21v4h-.08A1.65 1.65 0 0 0 19.4 15Z" /></svg>;
 }
 
-export function VelaPlayer({
-  src,
-  poster,
-  title = "Untitled",
-  eyebrow = "VELA",
-  accent = "#d8ff62",
-  captionsSrc,
-}: VelaPlayerProps) {
+export const VelaPlayer = forwardRef<VelaPlayerHandle, VelaPlayerProps>(function VelaPlayer(
+  {
+    src,
+    sourceType = "auto",
+    poster,
+    title = "Untitled",
+    eyebrow = "VELA",
+    accent,
+    captionsSrc,
+    textTracks = [],
+    thumbnailVtt,
+    theme,
+    autoPlay = false,
+    onReady,
+    onStateChange,
+  },
+  ref,
+) {
   const shellRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const previewVideoRef = useRef<HTMLVideoElement>(null);
+  const shakaRef = useRef<AdaptivePlayer | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const resolvedType = useMemo(() => detectSourceType(src, sourceType), [src, sourceType]);
+  const adaptive = resolvedType === "hls" || resolvedType === "dash";
+  const mergedTheme = useMemo(() => ({ ...defaultTheme, ...theme, accent: accent ?? theme?.accent ?? defaultTheme.accent }), [accent, theme]);
+  const normalizedTracks = useMemo<VelaTextTrack[]>(() => {
+    if (!captionsSrc) return textTracks;
+    if (textTracks.some((track) => track.src === captionsSrc)) return textTracks;
+    return [{ src: captionsSrc, language: "en", label: "English", kind: "subtitles" }, ...textTracks];
+  }, [captionsSrc, textTracks]);
 
   const [playing, setPlaying] = useState(false);
   const [started, setStarted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [buffered, setBuffered] = useState(0);
-  const [volume, setVolume] = useState(0.82);
+  const [volume, setVolumeState] = useState(0.82);
   const [muted, setMuted] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [preview, setPreview] = useState<{ x: number; time: number } | null>(null);
   const [speed, setSpeed] = useState(1);
-  const [speedOpen, setSpeedOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [loop, setLoop] = useState(false);
-  const [captions, setCaptions] = useState(false);
+  const [qualities, setQualities] = useState<QualityOption[]>([]);
+  const [selectedQuality, setSelectedQuality] = useState<"auto" | number>("auto");
+  const [textOptions, setTextOptions] = useState<TextOption[]>([]);
+  const [selectedText, setSelectedText] = useState<"off" | string>("off");
+  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [thumbnailCues, setThumbnailCues] = useState<ThumbnailCue[]>([]);
+  const [spriteSize, setSpriteSize] = useState<{ width: number; height: number } | null>(null);
 
   const progress = duration ? (currentTime / duration) * 100 : 0;
   const bufferedProgress = duration ? (buffered / duration) * 100 : 0;
-  const style = useMemo(() => ({ "--vela-accent": accent }) as CSSProperties, [accent]);
+  const style = useMemo(() => ({
+    "--vela-accent": mergedTheme.accent,
+    "--vela-surface": mergedTheme.surface,
+    "--vela-foreground": mergedTheme.foreground,
+    "--vela-muted": mergedTheme.muted,
+    "--vela-radius": `${mergedTheme.radius}px`,
+    "--vela-blur": `${mergedTheme.blur}px`,
+    "--vela-controls-opacity": mergedTheme.controlsOpacity,
+  }) as CSSProperties, [mergedTheme]);
+
+  const getState = useCallback((): VelaPlayerState => ({
+    currentTime,
+    duration,
+    paused: !playing,
+    volume,
+    muted,
+    quality: selectedQuality,
+    textTrack: selectedText,
+    sourceType: resolvedType,
+  }), [currentTime, duration, muted, playing, resolvedType, selectedQuality, selectedText, volume]);
+
+  useEffect(() => {
+    onStateChange?.(getState());
+  }, [getState, onStateChange]);
 
   const clearHideTimer = useCallback(() => {
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
@@ -106,33 +272,193 @@ export function VelaPlayer({
   const scheduleControls = useCallback(() => {
     clearHideTimer();
     setControlsVisible(true);
-    if (playing) {
-      hideTimerRef.current = setTimeout(() => {
-        if (!speedOpen) setControlsVisible(false);
-      }, 2200);
+    if (playing && !settingsOpen) {
+      hideTimerRef.current = setTimeout(() => setControlsVisible(false), 2200);
     }
-  }, [clearHideTimer, playing, speedOpen]);
+  }, [clearHideTimer, playing, settingsOpen]);
 
   useEffect(() => {
     scheduleControls();
     return clearHideTimer;
   }, [scheduleControls, clearHideTimer]);
 
-  const togglePlay = useCallback(async () => {
+  const refreshAdaptiveTracks = useCallback((player: AdaptivePlayer) => {
+    const variants = player.getVariantTracks();
+    const activeLanguage = variants.find((track) => track.active)?.language;
+    const byHeight = new Map<number, AdaptiveTrack>();
+    for (const track of variants) {
+      if (!track.height || (activeLanguage && track.language !== activeLanguage)) continue;
+      const previous = byHeight.get(track.height);
+      if (!previous || track.bandwidth > previous.bandwidth) byHeight.set(track.height, track);
+    }
+    setQualities(
+      Array.from(byHeight.entries())
+        .map(([height, track]) => ({ height, bandwidth: track.bandwidth, track }))
+        .sort((a, b) => b.height - a.height),
+    );
+
+    const texts = player.getTextTracks();
+    setTextOptions(texts.map((track) => ({
+      id: String(track.id),
+      label: track.label || track.language || `Track ${track.id}`,
+      language: track.language,
+      track,
+    })));
+  }, []);
+
+  useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    let disposed = false;
+    let instance: AdaptivePlayer | null = null;
+
+    setStatus("loading");
+    setErrorMessage(null);
+    setSelectedQuality("auto");
+    setSelectedText("off");
+    setQualities([]);
+    setTextOptions([]);
+    setStarted(false);
+    setPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+
+    const onEngineError: EventListener = () => {
+      if (!disposed) {
+        setStatus("error");
+        setErrorMessage("The adaptive stream could not be loaded.");
+      }
+    };
+
+    async function load() {
+      try {
+        if (adaptive) {
+          video.removeAttribute("src");
+          video.load();
+          const module = await import("shaka-player");
+          const candidate = module as unknown as { default?: ShakaNamespace };
+          const shaka = candidate.default ?? (module as unknown as ShakaNamespace);
+          shaka.polyfill.installAll();
+          if (shaka.Player.isBrowserSupported && !shaka.Player.isBrowserSupported()) {
+            throw new Error("Adaptive playback is not supported in this browser.");
+          }
+
+          instance = new shaka.Player();
+          shakaRef.current = instance;
+          instance.addEventListener("error", onEngineError);
+          instance.configure({ abr: { enabled: true } });
+          await instance.attach(video);
+          await instance.load(src, undefined, sourceMime(resolvedType));
+
+          for (const track of normalizedTracks) {
+            await instance.addTextTrackAsync(
+              track.src,
+              track.language,
+              track.kind ?? "subtitles",
+              track.mimeType ?? "text/vtt",
+            );
+          }
+
+          if (disposed) return;
+          refreshAdaptiveTracks(instance);
+        } else {
+          shakaRef.current = null;
+          video.src = src;
+          video.load();
+          setTextOptions(normalizedTracks.map((track, nativeIndex) => ({
+            id: `native-${nativeIndex}`,
+            label: track.label,
+            language: track.language,
+            nativeIndex,
+          })));
+        }
+
+        if (disposed) return;
+        setStatus("ready");
+        onReady?.();
+        if (autoPlay) {
+          setStarted(true);
+          await video.play();
+        }
+      } catch (error) {
+        if (disposed) return;
+        setStatus("error");
+        setErrorMessage(error instanceof Error ? error.message : "Vela could not load this source.");
+      }
+    }
+
+    void load();
+    return () => {
+      disposed = true;
+      shakaRef.current = null;
+      if (instance) void instance.destroy();
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+    };
+  }, [adaptive, autoPlay, normalizedTracks, onReady, refreshAdaptiveTracks, resolvedType, src]);
+
+  useEffect(() => {
+    if (!thumbnailVtt) {
+      setThumbnailCues([]);
+      setSpriteSize(null);
+      return;
+    }
+    const controller = new AbortController();
+    loadThumbnailVtt(thumbnailVtt, controller.signal)
+      .then((cues) => setThumbnailCues(cues))
+      .catch(() => setThumbnailCues([]));
+    return () => controller.abort();
+  }, [thumbnailVtt]);
+
+  useEffect(() => {
+    const first = thumbnailCues[0];
+    if (!first || typeof window === "undefined") {
+      setSpriteSize(null);
+      return;
+    }
+    const image = new Image();
+    image.onload = () => setSpriteSize({ width: image.naturalWidth, height: image.naturalHeight });
+    image.onerror = () => setSpriteSize(null);
+    image.src = first.url;
+  }, [thumbnailCues]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video) video.loop = loop;
+  }, [loop]);
+
+  const togglePlay = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video || status === "error") return;
     if (video.paused) {
       setStarted(true);
       await video.play();
     } else {
       video.pause();
     }
+  }, [status]);
+
+  const seekTo = useCallback((time: number) => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.currentTime = Math.min(Math.max(time, 0), video.duration || 0);
   }, []);
 
   const seekBy = useCallback((amount: number) => {
     const video = videoRef.current;
     if (!video) return;
-    video.currentTime = Math.min(Math.max(video.currentTime + amount, 0), video.duration || 0);
+    seekTo(video.currentTime + amount);
+  }, [seekTo]);
+
+  const setVolume = useCallback((value: number) => {
+    const video = videoRef.current;
+    if (!video) return;
+    const next = Math.min(Math.max(value, 0), 1);
+    video.volume = next;
+    video.muted = next === 0;
+    setVolumeState(next);
+    setMuted(next === 0);
   }, []);
 
   const toggleMute = useCallback(() => {
@@ -141,6 +467,55 @@ export function VelaPlayer({
     video.muted = !video.muted;
     setMuted(video.muted);
   }, []);
+
+  const selectQuality = useCallback((quality: "auto" | number) => {
+    const player = shakaRef.current;
+    if (!player) return;
+    if (quality === "auto") {
+      player.configure({ abr: { enabled: true } });
+      setSelectedQuality("auto");
+      return;
+    }
+    const option = qualities.find((item) => item.height === quality);
+    if (!option) return;
+    player.configure({ abr: { enabled: false } });
+    player.selectVariantTrack(option.track, true);
+    setSelectedQuality(quality);
+  }, [qualities]);
+
+  const selectTextTrack = useCallback((id: "off" | string) => {
+    const video = videoRef.current;
+    const player = shakaRef.current;
+    if (!video) return;
+
+    if (id === "off") {
+      if (player) player.setTextTrackVisibility(false);
+      for (let index = 0; index < video.textTracks.length; index += 1) video.textTracks[index].mode = "disabled";
+      setSelectedText("off");
+      return;
+    }
+
+    const option = textOptions.find((item) => item.id === id);
+    if (!option) return;
+    if (player && option.track) {
+      player.selectTextTrack(option.track);
+      player.setTextTrackVisibility(true);
+    } else if (option.nativeIndex !== undefined) {
+      for (let index = 0; index < video.textTracks.length; index += 1) {
+        video.textTracks[index].mode = index === option.nativeIndex ? "showing" : "disabled";
+      }
+    }
+    setSelectedText(id);
+  }, [textOptions]);
+
+  const toggleCaptions = useCallback(() => {
+    if (selectedText === "off") {
+      const first = textOptions[0];
+      if (first) selectTextTrack(first.id);
+    } else {
+      selectTextTrack("off");
+    }
+  }, [selectTextTrack, selectedText, textOptions]);
 
   const toggleFullscreen = useCallback(async () => {
     const shell = shellRef.current;
@@ -156,23 +531,26 @@ export function VelaPlayer({
       if (document.pictureInPictureElement) await document.exitPictureInPicture();
       else if (video.requestPictureInPicture) await video.requestPictureInPicture();
     } catch {
-      // Browsers may reject PiP while metadata is not ready or when policy blocks it.
+      // PiP can be blocked by browser policy or unavailable before metadata is ready.
     }
   }, []);
 
-  const toggleCaptions = useCallback(() => {
-    const video = videoRef.current;
-    if (!video || video.textTracks.length === 0) return;
-    const next = !captions;
-    for (let index = 0; index < video.textTracks.length; index += 1) {
-      video.textTracks[index].mode = next ? "showing" : "disabled";
-    }
-    setCaptions(next);
-  }, [captions]);
+  useImperativeHandle(ref, () => ({
+    play: async () => {
+      setStarted(true);
+      await videoRef.current?.play();
+    },
+    pause: () => videoRef.current?.pause(),
+    seek: seekTo,
+    setVolume,
+    setQuality: selectQuality,
+    setTextTrack: selectTextTrack,
+    getState,
+  }), [getState, seekTo, selectQuality, selectTextTrack, setVolume]);
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     const tag = (event.target as HTMLElement | null)?.tagName;
-    if (tag === "INPUT") return;
+    if (tag === "INPUT" || tag === "BUTTON") return;
     if ([" ", "k", "K"].includes(event.key)) {
       event.preventDefault();
       void togglePlay();
@@ -180,24 +558,14 @@ export function VelaPlayer({
     else if (event.key === "ArrowRight") seekBy(5);
     else if (["m", "M"].includes(event.key)) toggleMute();
     else if (["f", "F"].includes(event.key)) void toggleFullscreen();
-    else if (["c", "C"].includes(event.key) && captionsSrc) toggleCaptions();
+    else if (["c", "C"].includes(event.key)) toggleCaptions();
     else if (["l", "L"].includes(event.key)) setLoop((value) => !value);
   };
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (video) video.loop = loop;
-  }, [loop]);
 
   const handleTimelineMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const ratio = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
-    const time = ratio * duration;
-    setPreview({ x: ratio * 100, time });
-    const previewVideo = previewVideoRef.current;
-    if (previewVideo && Number.isFinite(time) && Math.abs(previewVideo.currentTime - time) > 0.18) {
-      previewVideo.currentTime = time;
-    }
+    setPreview({ x: ratio * 100, time: ratio * duration });
   };
 
   const updateBuffered = () => {
@@ -206,23 +574,31 @@ export function VelaPlayer({
     setBuffered(video.buffered.end(video.buffered.length - 1));
   };
 
-  const onVolumeChange = (value: number) => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.volume = value;
-    video.muted = value === 0;
-    setVolume(value);
-    setMuted(value === 0);
-  };
-
   const onSpeedChange = (value: number) => {
     const video = videoRef.current;
     if (!video) return;
     video.playbackRate = value;
     setSpeed(value);
-    setSpeedOpen(false);
-    scheduleControls();
   };
+
+  const previewCue = preview ? findThumbnailCue(thumbnailCues, preview.time) : null;
+  const previewImageStyle = useMemo<CSSProperties | undefined>(() => {
+    if (!previewCue) return undefined;
+    const base: CSSProperties = { backgroundImage: `url("${previewCue.url}")` };
+    if (
+      spriteSize && previewCue.width && previewCue.height &&
+      previewCue.x !== undefined && previewCue.y !== undefined
+    ) {
+      const xDenominator = Math.max(spriteSize.width - previewCue.width, 1);
+      const yDenominator = Math.max(spriteSize.height - previewCue.height, 1);
+      return {
+        ...base,
+        backgroundSize: `${(spriteSize.width / previewCue.width) * 100}% ${(spriteSize.height / previewCue.height) * 100}%`,
+        backgroundPosition: `${(previewCue.x / xDenominator) * 100}% ${(previewCue.y / yDenominator) * 100}%`,
+      };
+    }
+    return { ...base, backgroundSize: "cover", backgroundPosition: "center" };
+  }, [previewCue, spriteSize]);
 
   return (
     <div
@@ -231,18 +607,19 @@ export function VelaPlayer({
       style={style}
       tabIndex={0}
       onPointerMove={scheduleControls}
-      onPointerLeave={() => playing && setControlsVisible(false)}
+      onPointerLeave={() => playing && !settingsOpen && setControlsVisible(false)}
       onFocus={scheduleControls}
       onKeyDown={handleKeyDown}
       aria-label={`${title} video player`}
+      data-source-type={resolvedType}
     >
       <video
         ref={videoRef}
         className="vela-video"
-        src={src}
         poster={poster}
         preload="metadata"
         playsInline
+        crossOrigin="anonymous"
         onClick={() => void togglePlay()}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
@@ -255,16 +632,36 @@ export function VelaPlayer({
         onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
         onProgress={updateBuffered}
       >
-        {captionsSrc ? <track kind="subtitles" src={captionsSrc} srcLang="en" label="English" /> : null}
+        {!adaptive ? normalizedTracks.map((track) => (
+          <track
+            key={`${track.language}-${track.src}`}
+            kind={track.kind ?? "subtitles"}
+            src={track.src}
+            srcLang={track.language}
+            label={track.label}
+            default={track.default}
+          />
+        )) : null}
       </video>
 
       <div className="vela-vignette" aria-hidden="true" />
+      <div className="vela-engine-badge" aria-label={`${resolvedType} playback`}>
+        <span className={`vela-status-dot is-${status}`} />
+        {resolvedType.toUpperCase()}{adaptive ? " / ABR" : ""}
+      </div>
 
-      {!started ? (
+      {status === "error" ? (
+        <div className="vela-error" role="alert">
+          <small>STREAM ERROR</small>
+          <strong>{errorMessage ?? "Unable to load video."}</strong>
+        </div>
+      ) : null}
+
+      {!started && status !== "error" ? (
         <button className="vela-poster-action" type="button" onClick={() => void togglePlay()} aria-label="Play video">
           <span className="vela-start-icon"><Icon name="play" /></span>
           <span className="vela-start-copy">
-            <small>PLAY FILM</small>
+            <small>{status === "loading" ? "PREPARING STREAM" : "PLAY FILM"}</small>
             <strong>00:00 — {formatTime(duration)}</strong>
           </span>
         </button>
@@ -276,14 +673,10 @@ export function VelaPlayer({
       </div>
 
       <div className="vela-controls" onPointerEnter={() => setControlsVisible(true)}>
-        <div
-          className="vela-timeline-wrap"
-          onPointerMove={handleTimelineMove}
-          onPointerLeave={() => setPreview(null)}
-        >
+        <div className="vela-timeline-wrap" onPointerMove={handleTimelineMove} onPointerLeave={() => setPreview(null)}>
           {preview ? (
             <div className="vela-preview" style={{ left: `${preview.x}%` }}>
-              <video ref={previewVideoRef} src={src} muted playsInline preload="metadata" aria-hidden="true" />
+              <div className="vela-preview-image" style={previewImageStyle} />
               <span>{formatTime(preview.time)}</span>
             </div>
           ) : null}
@@ -298,10 +691,7 @@ export function VelaPlayer({
             max={duration || 0}
             step="0.01"
             value={Math.min(currentTime, duration || 0)}
-            onChange={(event) => {
-              const video = videoRef.current;
-              if (video) video.currentTime = Number(event.target.value);
-            }}
+            onChange={(event) => seekTo(Number(event.target.value))}
             aria-label="Seek video"
           />
         </div>
@@ -311,66 +701,73 @@ export function VelaPlayer({
             <button className="vela-icon-button primary" type="button" onClick={() => void togglePlay()} aria-label={playing ? "Pause" : "Play"}>
               <Icon name={playing ? "pause" : "play"} />
             </button>
-
             <div className="vela-volume-cluster">
               <button className="vela-icon-button" type="button" onClick={toggleMute} aria-label={muted ? "Unmute" : "Mute"}>
                 <Icon name={muted || volume === 0 ? "muted" : "volume"} />
               </button>
-              <input
-                className="vela-volume-input"
-                type="range"
-                min={0}
-                max={1}
-                step="0.01"
-                value={muted ? 0 : volume}
-                onChange={(event) => onVolumeChange(Number(event.target.value))}
-                aria-label="Volume"
-              />
+              <input className="vela-volume-input" type="range" min={0} max={1} step="0.01" value={muted ? 0 : volume} onChange={(event) => setVolume(Number(event.target.value))} aria-label="Volume" />
             </div>
-
             <div className="vela-timecode" aria-label={`${formatTime(currentTime)} of ${formatTime(duration)}`}>
-              <span>{formatTime(currentTime)}</span>
-              <i>/</i>
-              <span>{formatTime(duration)}</span>
+              <span>{formatTime(currentTime)}</span><i>/</i><span>{formatTime(duration)}</span>
             </div>
           </div>
 
           <div className="vela-control-group right">
-            {captionsSrc ? (
-              <button className={`vela-icon-button ${captions ? "is-active" : ""}`} type="button" onClick={toggleCaptions} aria-label="Toggle captions">
+            {textOptions.length ? (
+              <button className={`vela-icon-button ${selectedText !== "off" ? "is-active" : ""}`} type="button" onClick={toggleCaptions} aria-label="Toggle captions">
                 <Icon name="captions" />
               </button>
             ) : null}
-
             <button className={`vela-icon-button ${loop ? "is-active" : ""}`} type="button" onClick={() => setLoop((value) => !value)} aria-label="Toggle loop">
               <Icon name="loop" />
             </button>
 
-            <div className="vela-speed-menu">
-              <button className={`vela-speed-button ${speedOpen ? "is-active" : ""}`} type="button" onClick={() => setSpeedOpen((value) => !value)} aria-expanded={speedOpen} aria-label="Playback speed">
-                {speed === 1 ? "1×" : `${speed}×`}
+            <div className="vela-settings-menu">
+              <button className={`vela-settings-button ${settingsOpen ? "is-active" : ""}`} type="button" onClick={() => setSettingsOpen((value) => !value)} aria-expanded={settingsOpen} aria-label="Playback settings">
+                <span>{selectedQuality === "auto" ? "AUTO" : `${selectedQuality}P`}</span>
+                <Icon name="settings" />
               </button>
-              {speedOpen ? (
-                <div className="vela-popover" role="menu" aria-label="Playback speed options">
-                  <span>SPEED</span>
-                  {speeds.map((value) => (
-                    <button key={value} type="button" onClick={() => onSpeedChange(value)} className={speed === value ? "selected" : ""} role="menuitem">
-                      {value === 1 ? "Normal" : `${value}×`}
-                    </button>
-                  ))}
+              {settingsOpen ? (
+                <div className="vela-popover vela-settings-popover" role="dialog" aria-label="Playback settings">
+                  {qualities.length ? (
+                    <section>
+                      <span>QUALITY</span>
+                      <button type="button" className={selectedQuality === "auto" ? "selected" : ""} onClick={() => selectQuality("auto")}>Auto <small>adaptive</small></button>
+                      {qualities.map((option) => (
+                        <button key={option.height} type="button" className={selectedQuality === option.height ? "selected" : ""} onClick={() => selectQuality(option.height)}>
+                          {option.height}p <small>{(option.bandwidth / 1_000_000).toFixed(1)} Mbps</small>
+                        </button>
+                      ))}
+                    </section>
+                  ) : null}
+                  <section>
+                    <span>SPEED</span>
+                    <div className="vela-speed-grid">
+                      {speeds.map((value) => (
+                        <button key={value} type="button" className={speed === value ? "selected" : ""} onClick={() => onSpeedChange(value)}>{value}×</button>
+                      ))}
+                    </div>
+                  </section>
+                  {textOptions.length ? (
+                    <section>
+                      <span>SUBTITLES</span>
+                      <button type="button" className={selectedText === "off" ? "selected" : ""} onClick={() => selectTextTrack("off")}>Off</button>
+                      {textOptions.map((option) => (
+                        <button key={option.id} type="button" className={selectedText === option.id ? "selected" : ""} onClick={() => selectTextTrack(option.id)}>
+                          {option.label}<small>{option.language.toUpperCase()}</small>
+                        </button>
+                      ))}
+                    </section>
+                  ) : null}
                 </div>
               ) : null}
             </div>
 
-            <button className="vela-icon-button desktop-only" type="button" onClick={() => void togglePip()} aria-label="Picture in picture">
-              <Icon name="pip" />
-            </button>
-            <button className="vela-icon-button" type="button" onClick={() => void toggleFullscreen()} aria-label="Fullscreen">
-              <Icon name="fullscreen" />
-            </button>
+            <button className="vela-icon-button desktop-only" type="button" onClick={() => void togglePip()} aria-label="Picture in picture"><Icon name="pip" /></button>
+            <button className="vela-icon-button" type="button" onClick={() => void toggleFullscreen()} aria-label="Fullscreen"><Icon name="fullscreen" /></button>
           </div>
         </div>
       </div>
     </div>
   );
-}
+});
