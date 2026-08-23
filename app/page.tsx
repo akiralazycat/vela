@@ -1,8 +1,11 @@
 import { VelaStudio } from "@/components/VelaStudio";
+import { HouseBar } from "@/components/house-bar";
 
 export default function Home() {
   return (
-    <main className="site-shell">
+    <>
+      <HouseBar product="Vela" />
+      <main className="site-shell">
       <header className="site-header">
         <a className="wordmark" href="#top" aria-label="Vela home">
           <span className="wordmark-mark" aria-hidden="true">◒</span>
@@ -101,6 +104,7 @@ import { VelaPlayer } from "@vela/player/react";`}</code></pre>
         <span>NPM PACKAGE</span>
         <span>WEB COMPONENT</span>
       </section>
-    </main>
+      </main>
+    </>
   );
 }
