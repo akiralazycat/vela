@@ -1,0 +1,373 @@
+l)
+      .then(setThumbnailCues)
+      .catch(() => setThumbnailCues([]));
+    return () => controller.abort();
+  }, [thumbnailVtt]);
+
+  useEffect(() => {
+    const first = thumbnailCues[0];
+    if (!first || typeof window === "undefined") {
+      setSpriteSize(null);
+      return;
+    }
+
+    const image = new Image();
+    image.onload = () => setSpriteSize({ width: image.naturalWidth, height: image.naturalHeight });
+    image.onerror = () => setSpriteSize(null);
+    image.src = first.url;
+  }, [thumbnailCues]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video) video.loop = loop && !isLive;
+  }, [isLive, loop]);
+
+  const togglePlay = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video || status === "error") return;
+    if (video.paused) {
+      setStarted(true);
+      await video.play();
+    } else {
+      video.pause();
+    }
+  }, [status]);
+
+  const seekTo = useCallback((time: number) => {
+    const video = videoRef.current;
+    if (!video) return;
+    const player = shakaRef.current;
+    if (player?.isLive()) {
+      const range = player.seekRange();
+      video.currentTime = clamp(time, range.start, range.end);
+    } else {
+      video.currentTime = clamp(time, 0, video.duration || 0);
+    }
+  }, []);
+
+  const seekBy = useCallback((amount: number) => {
+    const video = videoRef.current;
+    if (video) seekTo(video.currentTime + amount);
+  }, [seekTo]);
+
+  const setVolume = useCallback((value: number) => {
+    const video = videoRef.current;
+    if (!video) return;
+    const next = clamp(value, 0, 1);
+    video.volume = next;
+    video.muted = next === 0;
+    setVolumeState(next);
+    setMuted(next === 0);
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !video.muted;
+    setMuted(video.muted);
+  }, []);
+
+  const selectQuality = useCallback((quality: "auto" | number) => {
+    const player = shakaRef.current;
+    if (!player) return;
+
+    if (quality === "auto") {
+      player.configure({ abr: { enabled: true } });
+      setSelectedQuality("auto");
+      return;
+    }
+
+    const option = qualities.find((item) => item.height === quality);
+    if (!option) return;
+    player.configure({ abr: { enabled: false } });
+    player.selectVariantTrack(option.track, true);
+    setSelectedQuality(quality);
+  }, [qualities]);
+
+  const selectTextTrack = useCallback((id: "off" | string) => {
+    const video = videoRef.current;
+    const player = shakaRef.current;
+    if (!video) return;
+
+    if (id === "off") {
+      if (player) player.selectTextTrack(null);
+      for (let index = 0; index < video.textTracks.length; index += 1) {
+        video.textTracks[index].mode = "disabled";
+      }
+      setSelectedText("off");
+      return;
+    }
+
+    const option = textOptions.find((item) => item.id === id);
+    if (!option) return;
+
+    if (player && option.track) {
+      player.selectTextTrack(option.track);
+    } else if (option.nativeIndex !== undefined) {
+      for (let index = 0; index < video.textTracks.length; index += 1) {
+        video.textTracks[index].mode = index === option.nativeIndex ? "showing" : "disabled";
+      }
+    }
+
+    setSelectedText(id);
+  }, [textOptions]);
+
+  const selectAudioTrack = useCallback((id: string) => {
+    const player = shakaRef.current;
+    const option = audioOptions.find((item) => item.id === id);
+    if (!player || !option) return;
+    player.selectAudioTrack(option.track);
+    setSelectedAudio(id);
+    window.setTimeout(() => refreshAdaptiveTracks(player), 0);
+  }, [audioOptions, refreshAdaptiveTracks]);
+
+  const setCaptionStyle = useCallback((patch: Partial<VelaCaptionStyle>) => {
+    setCaptionStyleState((current) => ({ ...current, ...patch }));
+  }, []);
+
+  const toggleCaptions = useCallback(() => {
+    if (selectedText === "off") {
+      const first = textOptions[0];
+      if (first) selectTextTrack(first.id);
+    } else {
+      selectTextTrack("off");
+    }
+  }, [selectTextTrack, selectedText, textOptions]);
+
+  const goLive = useCallback(() => {
+    const player = shakaRef.current;
+    if (!player?.isLive()) return;
+    const range = player.seekRange();
+    seekTo(Math.max(range.start, range.end - 0.35));
+  }, [seekTo]);
+
+  const jumpChapter = useCallback((direction: 1 | -1) => {
+    if (!resolvedChapters.length) return;
+    const currentIndex = Math.max(
+      resolvedChapters.findIndex((chapter, index) => {
+        const end = chapter.end ?? resolvedChapters[index + 1]?.start ?? timelineEnd;
+        return currentTime >= chapter.start && currentTime < end;
+      }),
+      0,
+    );
+    const targetIndex = clamp(currentIndex + direction, 0, resolvedChapters.length - 1);
+    seekTo(resolvedChapters[targetIndex].start);
+  }, [currentTime, resolvedChapters, seekTo, timelineEnd]);
+
+  const toggleFullscreen = useCallback(async () => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    if (!document.fullscreenElement) await shell.requestFullscreen?.();
+    else await document.exitFullscreen?.();
+  }, []);
+
+  const togglePip = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video || !("pictureInPictureEnabled" in document)) return;
+    try {
+      if (document.pictureInPictureElement) await document.exitPictureInPicture();
+      else if (video.requestPictureInPicture) await video.requestPictureInPicture();
+    } catch {
+      // PiP can be unavailable before metadata is ready or blocked by browser policy.
+    }
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    play: async () => {
+      setStarted(true);
+      await videoRef.current?.play();
+    },
+    pause: () => videoRef.current?.pause(),
+    seek: seekTo,
+    setVolume,
+    setQuality: selectQuality,
+    setTextTrack: selectTextTrack,
+    setAudioTrack: selectAudioTrack,
+    setCaptionStyle,
+    goLive,
+    nextChapter: () => jumpChapter(1),
+    previousChapter: () => jumpChapter(-1),
+    getState,
+  }), [
+    getState,
+    goLive,
+    jumpChapter,
+    seekTo,
+    selectAudioTrack,
+    selectQuality,
+    selectTextTrack,
+    setCaptionStyle,
+    setVolume,
+  ]);
+
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const tag = (event.target as HTMLElement | null)?.tagName;
+    if (tag === "INPUT" || tag === "BUTTON" || tag === "SELECT") return;
+    const key = event.key.toLowerCase();
+
+    if (event.key === " " || key === "k") {
+      event.preventDefault();
+      void togglePlay();
+    } else if (event.key === "ArrowLeft") seekBy(-5);
+    else if (event.key === "ArrowRight") seekBy(5);
+    else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setVolume(volume + 0.05);
+    } else if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setVolume(volume - 0.05);
+    } else if (key === "j") seekBy(-10);
+    else if (key === "l" && event.shiftKey) setLoop((value) => !value);
+    else if (key === "l") seekBy(10);
+    else if (key === "m") toggleMute();
+    else if (key === "f") void toggleFullscreen();
+    else if (key === "c") toggleCaptions();
+    else if (key === "home") seekTo(timelineStart);
+    else if (key === "end") isLive ? goLive() : seekTo(timelineEnd);
+    else if (event.key === ">") onSpeedChange(Math.min(2, speed + 0.25));
+    else if (event.key === "<") onSpeedChange(Math.max(0.5, speed - 0.25));
+  };
+
+  const handleTimelineMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const ratio = clamp((event.clientX - rect.left) / rect.width, 0, 1);
+    setPreview({ x: ratio * 100, time: timelineStart + ratio * timelineSpan });
+  };
+
+  const updateRuntime = (video: HTMLVideoElement) => {
+    setCurrentTime(video.currentTime);
+    const player = shakaRef.current;
+    if (player?.isLive()) {
+      const range = player.seekRange();
+      setSeekWindow(range);
+      setLiveLatencyMs(player.getLiveLatency());
+    }
+  };
+
+  const updateBuffered = () => {
+    const video = videoRef.current;
+    if (!video || !video.buffered.length) return;
+    setBuffered(video.buffered.end(video.buffered.length - 1));
+  };
+
+  function onSpeedChange(value: number) {
+    const video = videoRef.current;
+    if (!video) return;
+    video.playbackRate = value;
+    setSpeed(value);
+  }
+
+  const handleMediaPointerDown = (event: ReactPointerEvent<HTMLVideoElement>) => {
+    if (!gestures) return;
+    gestureRef.current = { x: event.clientX, y: event.clientY, at: performance.now() };
+  };
+
+  const handleMediaPointerUp = (event: ReactPointerEvent<HTMLVideoElement>) => {
+    const start = gestureRef.current;
+    gestureRef.current = null;
+    if (!start) {
+      if (event.pointerType === "mouse") void togglePlay();
+      return;
+    }
+
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    const elapsed = performance.now() - start.at;
+
+    if (event.pointerType === "touch" && Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+      const amount = clamp(Math.round(dx / 7), -30, 30);
+      seekBy(amount);
+      flashGesture(`${amount > 0 ? "+" : ""}${amount}s`);
+      return;
+    }
+
+    if (event.pointerType === "mouse") {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6 && elapsed < 500) void togglePlay();
+      return;
+    }
+
+    if (elapsed > 320) return;
+    const rect = shellRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const ratio = clamp((event.clientX - rect.left) / rect.width, 0, 1);
+    const zone: "left" | "center" | "right" = ratio < 0.34 ? "left" : ratio > 0.66 ? "right" : "center";
+    const now = performance.now();
+    const previous = lastTapRef.current;
+
+    if (previous && previous.zone === zone && now - previous.at < 360) {
+      lastTapRef.current = null;
+      if (zone === "left") {
+        seekBy(-10);
+        flashGesture("−10s");
+      } else if (zone === "right") {
+        seekBy(10);
+        flashGesture("+10s");
+      } else {
+        void togglePlay();
+        flashGesture(playing ? "PAUSE" : "PLAY");
+      }
+    } else {
+      lastTapRef.current = { zone, at: now };
+      scheduleControls();
+    }
+  };
+
+  const previewCue = preview ? findThumbnailCue(thumbnailCues, preview.time) : null;
+  const previewImageStyle = useMemo<CSSProperties | undefined>(() => {
+    if (!previewCue) return undefined;
+    const base: CSSProperties = { backgroundImage: `url("${previewCue.url}")` };
+
+    if (
+      spriteSize && previewCue.width && previewCue.height &&
+      previewCue.x !== undefined && previewCue.y !== undefined
+    ) {
+      const xDenominator = Math.max(spriteSize.width - previewCue.width, 1);
+      const yDenominator = Math.max(spriteSize.height - previewCue.height, 1);
+      return {
+        ...base,
+        backgroundSize: `${(spriteSize.width / previewCue.width) * 100}% ${(spriteSize.height / previewCue.height) * 100}%`,
+        backgroundPosition: `${(previewCue.x / xDenominator) * 100}% ${(previewCue.y / yDenominator) * 100}%`,
+      };
+    }
+
+    return { ...base, backgroundSize: "cover", backgroundPosition: "center" };
+  }, [previewCue, spriteSize]);
+
+  return (
+    <div
+      ref={shellRef}
+      className={`vela-player ${controlsVisible ? "is-controls-visible" : ""} ${started ? "has-started" : ""} ${isLive ? "is-live" : ""}`}
+      style={style}
+      tabIndex={0}
+      onPointerMove={scheduleControls}
+      onPointerLeave={() => playing && !settingsOpen && setControlsVisible(false)}
+      onFocus={scheduleControls}
+      onKeyDown={handleKeyDown}
+      aria-label={`${title} video player`}
+      data-source-type={resolvedType}
+    >
+      <video
+        ref={videoRef}
+        className="vela-video"
+        poster={poster}
+        preload="metadata"
+        playsInline
+        crossOrigin="anonymous"
+        onPointerDown={handleMediaPointerDown}
+        onPointerUp={handleMediaPointerUp}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => setPlaying(false)}
+        onLoadedMetadata={(event) => {
+          if (Number.isFinite(event.currentTarget.duration)) setDuration(event.currentTarget.duration);
+          event.currentTarget.volume = volume;
+        }}
+        onDurationChange={(event) => {
+          if (Number.isFinite(event.currentTarget.duration)) setDuration(event.currentTarget.duration);
+        }}
+        onTimeUpdate={(event) => updateRuntime(event.currentTarget)}
+        onProgress={updateBuffered}
+      >
+        {!adaptive ? normalizedTracks.map((track) => (
+          <track
+         
