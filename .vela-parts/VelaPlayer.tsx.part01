@@ -1,0 +1,353 @@
+
+    if (!captionsSrc) return textTracks;
+    if (textTracks.some((track) => track.src === captionsSrc)) return textTracks;
+    return [{ src: captionsSrc, language: "en", label: "English", kind: "subtitles" }, ...textTracks];
+  }, [captionsSrc, textTracks]);
+
+  const [playing, setPlaying] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [buffered, setBuffered] = useState(0);
+  const [volume, setVolumeState] = useState(0.82);
+  const [muted, setMuted] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const [preview, setPreview] = useState<{ x: number; time: number } | null>(null);
+  const [speed, setSpeed] = useState(1);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [loop, setLoop] = useState(false);
+  const [qualities, setQualities] = useState<QualityOption[]>([]);
+  const [selectedQuality, setSelectedQuality] = useState<"auto" | number>("auto");
+  const [textOptions, setTextOptions] = useState<TextOption[]>([]);
+  const [selectedText, setSelectedText] = useState<"off" | string>("off");
+  const [audioOptions, setAudioOptions] = useState<AudioOption[]>([]);
+  const [selectedAudio, setSelectedAudio] = useState<string | null>(null);
+  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [thumbnailCues, setThumbnailCues] = useState<ThumbnailCue[]>([]);
+  const [spriteSize, setSpriteSize] = useState<{ width: number; height: number } | null>(null);
+  const [resolvedChapters, setResolvedChapters] = useState<VelaChapter[]>(chapters);
+  const [isLive, setIsLive] = useState(false);
+  const [seekWindow, setSeekWindow] = useState({ start: 0, end: 0 });
+  const [liveLatencyMs, setLiveLatencyMs] = useState<number | null>(null);
+  const [badges, setBadges] = useState<string[]>([]);
+  const [gestureHint, setGestureHint] = useState<string | null>(null);
+
+  const timelineStart = isLive ? seekWindow.start : 0;
+  const timelineEnd = isLive ? seekWindow.end : duration;
+  const timelineSpan = Math.max(timelineEnd - timelineStart, 0);
+  const progress = timelineSpan ? clamp(((currentTime - timelineStart) / timelineSpan) * 100, 0, 100) : 0;
+  const bufferedProgress = timelineSpan ? clamp(((buffered - timelineStart) / timelineSpan) * 100, 0, 100) : 0;
+  const atLiveEdge = isLive ? seekWindow.end - currentTime <= 2.5 : false;
+
+  const currentChapter = useMemo(() => {
+    return resolvedChapters.find((chapter, index) => {
+      const end = chapter.end ?? resolvedChapters[index + 1]?.start ?? timelineEnd;
+      return currentTime >= chapter.start && currentTime < end;
+    }) ?? null;
+  }, [currentTime, resolvedChapters, timelineEnd]);
+
+  const captionEdge = captionStyleState.edge === "outline"
+    ? "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000"
+    : captionStyleState.edge === "shadow"
+      ? "0 2px 5px rgba(0,0,0,.95)"
+      : "none";
+
+  const captionFont = captionStyleState.fontFamily === "serif"
+    ? 'Georgia, "Times New Roman", serif'
+    : captionStyleState.fontFamily === "mono"
+      ? '"SFMono-Regular", Consolas, monospace'
+      : "Arial, Helvetica, sans-serif";
+
+  const style = useMemo(() => ({
+    "--vela-accent": mergedTheme.accent,
+    "--vela-surface": mergedTheme.surface,
+    "--vela-foreground": mergedTheme.foreground,
+    "--vela-muted": mergedTheme.muted,
+    "--vela-radius": `${mergedTheme.radius}px`,
+    "--vela-blur": `${mergedTheme.blur}px`,
+    "--vela-controls-opacity": mergedTheme.controlsOpacity,
+    "--vela-caption-scale": captionStyleState.fontScale,
+    "--vela-caption-color": captionStyleState.color,
+    "--vela-caption-bg": hexToRgba(captionStyleState.background, captionStyleState.backgroundOpacity),
+    "--vela-caption-edge": captionEdge,
+    "--vela-caption-font": captionFont,
+  }) as CSSProperties, [captionEdge, captionFont, captionStyleState, mergedTheme]);
+
+  const getState = useCallback((): VelaPlayerState => ({
+    currentTime,
+    duration: isLive ? timelineSpan : duration,
+    paused: !playing,
+    volume,
+    muted,
+    quality: selectedQuality,
+    textTrack: selectedText,
+    audioTrack: selectedAudio,
+    sourceType: resolvedType,
+    isLive,
+    atLiveEdge,
+    liveLatencyMs,
+    chapter: currentChapter?.id ?? currentChapter?.title ?? null,
+    mediaBadges: badges,
+  }), [
+    atLiveEdge,
+    badges,
+    currentChapter,
+    currentTime,
+    duration,
+    isLive,
+    liveLatencyMs,
+    muted,
+    playing,
+    resolvedType,
+    selectedAudio,
+    selectedQuality,
+    selectedText,
+    timelineSpan,
+    volume,
+  ]);
+
+  useEffect(() => {
+    onStateChange?.(getState());
+  }, [getState, onStateChange]);
+
+  const clearHideTimer = useCallback(() => {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+  }, []);
+
+  const scheduleControls = useCallback(() => {
+    clearHideTimer();
+    setControlsVisible(true);
+    if (playing && !settingsOpen) {
+      hideTimerRef.current = setTimeout(() => setControlsVisible(false), 2200);
+    }
+  }, [clearHideTimer, playing, settingsOpen]);
+
+  useEffect(() => {
+    scheduleControls();
+    return clearHideTimer;
+  }, [scheduleControls, clearHideTimer]);
+
+  const flashGesture = useCallback((message: string) => {
+    if (gestureHintTimerRef.current) clearTimeout(gestureHintTimerRef.current);
+    setGestureHint(message);
+    gestureHintTimerRef.current = setTimeout(() => setGestureHint(null), 700);
+  }, []);
+
+  const refreshAdaptiveTracks = useCallback((player: AdaptivePlayer) => {
+    const variants = player.getVariantTracks();
+    const activeVariant = variants.find((track) => track.active);
+    const activeLanguage = activeVariant?.audioLanguage ?? activeVariant?.language;
+
+    const byHeight = new Map<number, AdaptiveTrack>();
+    for (const track of variants) {
+      const language = track.audioLanguage ?? track.language;
+      if (!track.height || (activeLanguage && language !== activeLanguage)) continue;
+      const previous = byHeight.get(track.height);
+      if (!previous || track.bandwidth > previous.bandwidth) byHeight.set(track.height, track);
+    }
+
+    setQualities(
+      Array.from(byHeight.entries())
+        .map(([height, track]) => ({ height, bandwidth: track.bandwidth, track }))
+        .sort((a, b) => b.height - a.height),
+    );
+
+    setTextOptions(player.getTextTracks().map((track) => ({
+      id: String(track.id),
+      label: track.label || track.language || `Track ${track.id}`,
+      language: track.language,
+      track,
+    })));
+
+    const audioTracks = player.getAudioTracks();
+    const audio = audioTracks.map((track, index) => ({
+      id: audioId(track, index),
+      label: track.label || track.language.toUpperCase() || `Audio ${index + 1}`,
+      language: track.language,
+      detail: audioDetail(track),
+      track,
+    }));
+    setAudioOptions(audio);
+    setSelectedAudio(audio.find((option) => option.track.active)?.id ?? audio[0]?.id ?? null);
+
+    const activeAudio = audioTracks.find((track) => track.active) ?? audioTracks[0];
+    setBadges(mediaBadges(activeVariant, activeAudio));
+  }, []);
+
+  const refreshLiveInfo = useCallback(() => {
+    const player = shakaRef.current;
+    if (!player || !player.isLive()) return;
+    const range = player.seekRange();
+    setSeekWindow(range);
+    setLiveLatencyMs(player.getLiveLatency());
+  }, []);
+
+  useEffect(() => {
+    const currentVideo = videoRef.current;
+    if (!currentVideo) return;
+    const media = currentVideo;
+    let disposed = false;
+    let instance: AdaptivePlayer | null = null;
+    const listeners: Array<[string, EventListener]> = [];
+
+    setStatus("loading");
+    setErrorMessage(null);
+    setSelectedQuality("auto");
+    setSelectedText("off");
+    setSelectedAudio(null);
+    setQualities([]);
+    setTextOptions([]);
+    setAudioOptions([]);
+    setBadges([]);
+    setStarted(false);
+    setPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setIsLive(false);
+    setSeekWindow({ start: 0, end: 0 });
+    setLiveLatencyMs(null);
+    setResolvedChapters(chapters);
+
+    const listen = (type: string, listener: EventListener) => {
+      instance?.addEventListener(type, listener);
+      listeners.push([type, listener]);
+    };
+
+    const onEngineError: EventListener = () => {
+      if (!disposed) {
+        setStatus("error");
+        setErrorMessage("The adaptive stream could not be loaded.");
+      }
+    };
+
+    async function load() {
+      try {
+        if (adaptive) {
+          media.removeAttribute("src");
+          media.load();
+
+          const module = await import("shaka-player");
+          const candidate = module as unknown as { default?: ShakaNamespace };
+          const shaka = candidate.default ?? (module as unknown as ShakaNamespace);
+          shaka.polyfill.installAll();
+
+          if (shaka.Player.isBrowserSupported && !shaka.Player.isBrowserSupported()) {
+            throw new Error("Adaptive playback is not supported in this browser.");
+          }
+
+          instance = new shaka.Player();
+          shakaRef.current = instance;
+          listen("error", onEngineError);
+          listen("trackschanged", () => {
+            if (instance && !disposed) refreshAdaptiveTracks(instance);
+          });
+          listen("variantchanged", () => {
+            if (instance && !disposed) refreshAdaptiveTracks(instance);
+          });
+          listen("audiotrackchanged", () => {
+            if (instance && !disposed) refreshAdaptiveTracks(instance);
+          });
+          listen("manifestupdated", () => {
+            if (!disposed) refreshLiveInfo();
+          });
+
+          instance.configure({ abr: { enabled: true } });
+          await instance.attach(media);
+          await instance.load(src, undefined, sourceMime(resolvedType));
+
+          for (const track of normalizedTracks) {
+            await instance.addTextTrackAsync(
+              track.src,
+              track.language,
+              track.kind ?? "subtitles",
+              track.mimeType ?? "text/vtt",
+            );
+          }
+
+          if (disposed) return;
+          refreshAdaptiveTracks(instance);
+
+          const live = instance.isLive();
+          setIsLive(live);
+          if (live) {
+            const range = instance.seekRange();
+            setSeekWindow(range);
+            setLiveLatencyMs(instance.getLiveLatency());
+          }
+
+          if (!chapters.length) {
+            const tracks = instance.getChaptersTracks();
+            const language = tracks.find((track) => track.language === chapterLanguage)?.language
+              ?? tracks[0]?.language;
+            if (language) {
+              const manifestChapters = await instance.getChaptersAsync(language);
+              if (!disposed) {
+                setResolvedChapters(manifestChapters.map((chapter) => ({
+                  id: chapter.id,
+                  title: chapter.title,
+                  start: chapter.startTime,
+                  end: chapter.endTime,
+                })));
+              }
+            }
+          }
+        } else {
+          shakaRef.current = null;
+          media.src = src;
+          media.load();
+          setTextOptions(normalizedTracks.map((track, nativeIndex) => ({
+            id: `native-${nativeIndex}`,
+            label: track.label,
+            language: track.language,
+            nativeIndex,
+          })));
+        }
+
+        if (disposed) return;
+        setStatus("ready");
+        onReadyRef.current?.();
+
+        if (autoPlay) {
+          setStarted(true);
+          await media.play();
+        }
+      } catch (error) {
+        if (disposed) return;
+        setStatus("error");
+        setErrorMessage(error instanceof Error ? error.message : "Vela could not load this source.");
+      }
+    }
+
+    void load();
+
+    return () => {
+      disposed = true;
+      shakaRef.current = null;
+      if (instance) void instance.destroy();
+      media.pause();
+      media.removeAttribute("src");
+      media.load();
+      void listeners;
+    };
+  }, [
+    adaptive,
+    autoPlay,
+    chapterLanguage,
+    chapters,
+    normalizedTracks,
+    refreshAdaptiveTracks,
+    refreshLiveInfo,
+    resolvedType,
+    src,
+  ]);
+
+  useEffect(() => {
+    if (!thumbnailVtt) {
+      setThumbnailCues([]);
+      setSpriteSize(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    loadThumbnailVtt(thumbnailVtt, controller.signa
