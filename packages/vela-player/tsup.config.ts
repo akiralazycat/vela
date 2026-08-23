@@ -6,6 +6,7 @@ export default defineConfig({
     react: "src/react.ts",
     "web-component": "src/web-component.ts",
   },
+  tsconfig: "tsconfig.json",
   format: ["esm", "cjs"],
   dts: true,
   sourcemap: true,
