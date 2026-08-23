@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
-import "./v2.css";
 
 export const metadata: Metadata = {
-  title: "Vela Player — Adaptive video, without the chrome.",
-  description: "A minimal, themeable HLS and MPEG-DASH player with an embed SDK.",
+  title: "Vela Player — Adaptive, live, and quietly designed.",
+  description: "A themeable HLS/DASH player with multilingual audio, live DVR, chapters, accessibility controls, an embed SDK, and Web Component distribution.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
