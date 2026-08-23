@@ -1,16 +1,41 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { VelaPlayer, type VelaTextTrack, type VelaTheme } from "@/components/VelaPlayer";
+import {
+  VelaPlayer,
+  type VelaCaptionStyle,
+  type VelaChapter,
+  type VelaTextTrack,
+  type VelaTheme,
+} from "@/components/VelaPlayer";
 
 const sources = {
-  dash: "https://storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd",
-  hls: "https://storage.googleapis.com/shaka-demo-assets/angel-one-hls/hls.m3u8",
-} as const;
+  dash: {
+    src: "https://storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd",
+    type: "dash" as const,
+    title: "Angel One / DASH",
+  },
+  hls: {
+    src: "https://storage.googleapis.com/shaka-demo-assets/angel-one-hls/hls.m3u8",
+    type: "hls" as const,
+    title: "Angel One / HLS",
+  },
+  live: {
+    src: "https://storage.googleapis.com/shaka-live-assets/player-source.mpd",
+    type: "dash" as const,
+    title: "Shaka History / Live",
+  },
+};
 
 const extraTracks: VelaTextTrack[] = [
   { src: "/demo-en.vtt", language: "en", label: "Vela English", kind: "subtitles" },
   { src: "/demo-ja.vtt", language: "ja", label: "Vela 日本語", kind: "subtitles" },
+];
+
+const demoChapters: VelaChapter[] = [
+  { id: "opening", title: "Opening", start: 0, end: 12 },
+  { id: "crossing", title: "The crossing", start: 12, end: 24 },
+  { id: "horizon", title: "Horizon", start: 24 },
 ];
 
 const initialTheme: VelaTheme = {
@@ -23,21 +48,38 @@ const initialTheme: VelaTheme = {
   controlsOpacity: 0.76,
 };
 
+const initialCaptionStyle: VelaCaptionStyle = {
+  fontScale: 1,
+  color: "#ffffff",
+  background: "#080908",
+  backgroundOpacity: 0.82,
+  edge: "shadow",
+  fontFamily: "sans",
+};
+
 export function VelaStudio() {
-  const [protocol, setProtocol] = useState<keyof typeof sources>("dash");
+  const [mode, setMode] = useState<keyof typeof sources>("dash");
   const [theme, setTheme] = useState(initialTheme);
+  const [captionStyle, setCaptionStyle] = useState(initialCaptionStyle);
   const [copied, setCopied] = useState(false);
+  const source = sources[mode];
 
   const config = useMemo(() => JSON.stringify({
-    src: sources[protocol],
-    sourceType: protocol,
-    thumbnailVtt: "/demo-thumbnails.vtt",
-    textTracks: extraTracks,
+    src: source.src,
+    sourceType: source.type,
+    thumbnailVtt: mode === "live" ? undefined : "/demo-thumbnails.vtt",
+    textTracks: mode === "live" ? [] : extraTracks,
+    chapters: mode === "live" ? [] : demoChapters,
+    captionStyle,
     theme,
-  }, null, 2), [protocol, theme]);
+  }, null, 2), [captionStyle, mode, source, theme]);
 
   function patchTheme<K extends keyof VelaTheme>(key: K, value: VelaTheme[K]) {
     setTheme((current) => ({ ...current, [key]: value }));
+  }
+
+  function patchCaption<K extends keyof VelaCaptionStyle>(key: K, value: VelaCaptionStyle[K]) {
+    setCaptionStyle((current) => ({ ...current, [key]: value }));
   }
 
   const copyConfig = async () => {
@@ -49,39 +91,41 @@ export function VelaStudio() {
   return (
     <div className="vela-studio">
       <div className="studio-toolbar">
-        <div className="studio-protocol-switch" aria-label="Streaming protocol">
-          {(["dash", "hls"] as const).map((item) => (
-            <button key={item} type="button" className={protocol === item ? "is-active" : ""} onClick={() => setProtocol(item)}>
+        <div className="studio-protocol-switch" aria-label="Playback mode">
+          {(["dash", "hls", "live"] as const).map((item) => (
+            <button key={item} type="button" className={mode === item ? "is-active" : ""} onClick={() => setMode(item)}>
               {item.toUpperCase()}
             </button>
           ))}
         </div>
-        <span>ADAPTIVE / MULTI-TRACK / SPRITE PREVIEW</span>
+        <span>AUDIO / CHAPTERS / LIVE DVR / HDR SIGNALS</span>
       </div>
 
       <VelaPlayer
-        key={protocol}
-        title="Angel One / Adaptive"
-        eyebrow="VELA STREAM"
-        src={sources[protocol]}
-        sourceType={protocol}
-        poster="/vela-poster.svg"
-        textTracks={extraTracks}
-        thumbnailVtt="/demo-thumbnails.vtt"
+        key={mode}
+        title={source.title}
+        eyebrow={mode === "live" ? "VELA LIVE" : "VELA STREAM"}
+        src={source.src}
+        sourceType={source.type}
+        poster={mode === "live" ? undefined : "/vela-poster.svg"}
+        textTracks={mode === "live" ? undefined : extraTracks}
+        thumbnailVtt={mode === "live" ? undefined : "/demo-thumbnails.vtt"}
+        chapters={mode === "live" ? undefined : demoChapters}
+        captionStyle={captionStyle}
         theme={theme}
       />
 
       <div className="stage-meta" aria-label="Demo details">
-        <span>HLS + MPEG-DASH</span>
-        <span>AUTO / FIXED QUALITY</span>
-        <span>WEBVTT SPRITE</span>
+        <span>MULTILINGUAL AUDIO</span>
+        <span>CHAPTER + DVR TIMELINE</span>
+        <span>HDR / DOLBY METADATA</span>
       </div>
 
       <div className="theme-lab">
         <div className="theme-lab-heading">
           <div>
-            <p className="eyebrow">Theme builder</p>
-            <h2>Make the player belong.</h2>
+            <p className="eyebrow">Theme + caption builder</p>
+            <h2>Design the entire surface.</h2>
           </div>
           <button type="button" className="copy-config" onClick={() => void copyConfig()}>{copied ? "COPIED" : "COPY CONFIG"}</button>
         </div>
@@ -108,9 +152,28 @@ export function VelaStudio() {
             <code>{theme.blur}px</code>
           </label>
           <label>
-            <span>Control density</span>
-            <input type="range" min="0.45" max="0.98" step="0.01" value={theme.controlsOpacity} onChange={(event) => patchTheme("controlsOpacity", Number(event.target.value))} />
-            <code>{Math.round(theme.controlsOpacity * 100)}%</code>
+            <span>Caption color</span>
+            <input type="color" value={captionStyle.color} onChange={(event) => patchCaption("color", event.target.value)} />
+            <code>{captionStyle.color}</code>
+          </label>
+          <label>
+            <span>Caption size</span>
+            <input type="range" min="0.8" max="1.5" step="0.1" value={captionStyle.fontScale} onChange={(event) => patchCaption("fontScale", Number(event.target.value))} />
+            <code>{Math.round(captionStyle.fontScale * 100)}%</code>
+          </label>
+          <label>
+            <span>Caption background</span>
+            <input type="range" min="0" max="1" step="0.05" value={captionStyle.backgroundOpacity} onChange={(event) => patchCaption("backgroundOpacity", Number(event.target.value))} />
+            <code>{Math.round(captionStyle.backgroundOpacity * 100)}%</code>
+          </label>
+          <label>
+            <span>Caption edge</span>
+            <select value={captionStyle.edge} onChange={(event) => patchCaption("edge", event.target.value as VelaCaptionStyle["edge"])}>
+              <option value="none">None</option>
+              <option value="shadow">Shadow</option>
+              <option value="outline">Outline</option>
+            </select>
+            <code>{captionStyle.edge}</code>
           </label>
         </div>
 
