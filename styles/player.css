@@ -1,0 +1,125 @@
+.vela-player {
+  --vela-accent: #d8ff62;
+  --vela-surface: #080908;
+  --vela-foreground: #fff;
+  --vela-muted: #a5a79f;
+  --vela-radius: 0px;
+  --vela-blur: 18px;
+  --vela-controls-opacity: .76;
+  --vela-caption-scale: 1;
+  --vela-caption-color: #fff;
+  --vela-caption-bg: rgba(8,9,8,.82);
+  --vela-caption-edge: 0 2px 5px rgba(0,0,0,.95);
+  --vela-caption-font: Arial, Helvetica, sans-serif;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--vela-surface);
+  color: var(--vela-foreground);
+  border-radius: var(--vela-radius);
+  border: 1px solid color-mix(in srgb, var(--vela-foreground) 13%, transparent);
+  outline: none;
+  touch-action: pan-y;
+  font-family: Arial, Helvetica, sans-serif;
+}
+.vela-player *, .vela-player *::before, .vela-player *::after { box-sizing: border-box; }
+.vela-player button, .vela-player input { font: inherit; }
+.vela-player button { color: inherit; }
+.vela-player:focus-visible { box-shadow: 0 0 0 2px var(--vela-accent); }
+.vela-video { width: 100%; height: 100%; display: block; object-fit: cover; background: #080808; }
+.vela-vignette { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(0,0,0,.12), transparent 32%, transparent 55%, rgba(0,0,0,.7)), linear-gradient(90deg, rgba(0,0,0,.2), transparent 38%); transition: opacity .35s ease; }
+.vela-player.has-started:not(.is-controls-visible) .vela-vignette { opacity: .18; }
+.vela-title-block { position: absolute; top: clamp(18px,3vw,34px); left: clamp(18px,3vw,34px); display: grid; gap: 8px; pointer-events: none; transition: opacity .22s ease, transform .22s ease; }
+.vela-title-block span { font-size: 8px; letter-spacing: .2em; color: rgba(255,255,255,.62); }
+.vela-title-block strong { font-size: clamp(14px,1.4vw,20px); font-weight: 500; letter-spacing: -.02em; }
+.vela-player.has-started:not(.is-controls-visible) .vela-title-block { opacity: 0; transform: translateY(-5px); }
+.vela-engine-badge { position: absolute; top: clamp(18px,3vw,34px); right: clamp(18px,3vw,34px); display: flex; align-items: center; gap: 7px; font-size: 8px; letter-spacing: .15em; color: rgba(255,255,255,.65); }
+.vela-status-dot { width: 5px; height: 5px; border-radius: 50%; background: #777; }
+.vela-status-dot.is-loading { animation: vela-pulse 1.1s ease-in-out infinite; }
+.vela-status-dot.is-ready { background: var(--vela-accent); }
+.vela-status-dot.is-error { background: #ff6969; }
+.vela-player.is-live .vela-status-dot.is-ready { background: #ff4f4f; box-shadow: 0 0 0 3px rgba(255,79,79,.13); }
+@keyframes vela-pulse { 50% { opacity: .25; } }
+.vela-media-badges { position: absolute; top: clamp(42px,5vw,58px); right: clamp(18px,3vw,34px); display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; max-width: 55%; }
+.vela-media-badges span { padding: 4px 6px; border: 1px solid rgba(255,255,255,.17); background: rgba(0,0,0,.28); backdrop-filter: blur(10px); font-size: 7px; letter-spacing: .13em; }
+.vela-poster-action { position: absolute; left: clamp(18px,3vw,34px); bottom: clamp(18px,3vw,34px); display: flex; align-items: center; gap: 14px; padding: 0; border: 0; background: transparent; cursor: pointer; text-align: left; }
+.vela-start-icon { width: clamp(48px,5vw,68px); aspect-ratio: 1; display: grid; place-items: center; border-radius: 50%; background: var(--vela-accent); color: #0d1007; transition: transform .2s ease, filter .2s ease; }
+.vela-start-icon svg { width: 17px; height: 17px; margin-left: 2px; }
+.vela-poster-action:hover .vela-start-icon { transform: scale(1.06); filter: brightness(1.05); }
+.vela-start-copy { display: grid; gap: 5px; }
+.vela-start-copy small { font-size: 8px; letter-spacing: .18em; color: rgba(255,255,255,.67); }
+.vela-start-copy strong { font-size: 11px; letter-spacing: .06em; font-weight: 500; }
+.vela-error { position: absolute; inset: 0; display: grid; place-content: center; gap: 9px; padding: 28px; text-align: center; background: rgba(8,9,8,.74); backdrop-filter: blur(10px); }
+.vela-error small { font-size: 8px; letter-spacing: .18em; color: #ff8585; }
+.vela-error strong { font-size: 14px; font-weight: 500; }
+.vela-gesture-hint { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 5; padding: 11px 14px; border-radius: 999px; background: rgba(4,4,4,.7); backdrop-filter: blur(12px); font-size: 11px; letter-spacing: .09em; pointer-events: none; animation: vela-hint .7s ease both; }
+@keyframes vela-hint { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.9); } 18%,70% { opacity: 1; transform: translate(-50%,-50%) scale(1); } 100% { opacity: 0; } }
+.vela-controls { position: absolute; z-index: 4; left: clamp(14px,2vw,24px); right: clamp(14px,2vw,24px); bottom: clamp(14px,2vw,24px); opacity: 0; transform: translateY(8px); transition: opacity .2s ease, transform .2s ease; pointer-events: none; }
+.vela-player.has-started.is-controls-visible .vela-controls { opacity: 1; transform: none; pointer-events: auto; }
+.vela-timeline-wrap { height: 26px; position: relative; display: flex; align-items: flex-end; }
+.vela-timeline { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,.22); overflow: visible; }
+.vela-buffered,.vela-progress { position: absolute; left: 0; top: 0; bottom: 0; pointer-events: none; }
+.vela-buffered { background: rgba(255,255,255,.28); }
+.vela-progress { background: var(--vela-accent); }
+.vela-chapter-marker { position: absolute; top: -2px; bottom: -2px; width: 1px; background: rgba(8,9,8,.72); box-shadow: 0 0 0 1px rgba(255,255,255,.24); transform: translateX(-.5px); }
+.vela-seek-input { position: absolute; inset: 0; width: 100%; height: 26px; margin: 0; opacity: 0; cursor: pointer; }
+.vela-preview { position: absolute; bottom: 16px; width: clamp(118px,18vw,200px); aspect-ratio: 16 / 9; transform: translateX(-50%); overflow: hidden; pointer-events: none; border: 1px solid rgba(255,255,255,.18); background: #0b0b0b; box-shadow: 0 15px 44px rgba(0,0,0,.36); }
+.vela-preview-image,.vela-preview-empty { width: 100%; height: 100%; background-repeat: no-repeat; }
+.vela-preview-empty { background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.08), transparent 42%), #10110f; }
+.vela-preview > span { position: absolute; right: 6px; bottom: 6px; padding: 3px 5px; background: rgba(0,0,0,.75); font-size: 8px; font-variant-numeric: tabular-nums; }
+.vela-control-row { min-height: 48px; padding: 5px 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid rgba(255,255,255,.12); border-top: 0; border-radius: 0 0 var(--vela-radius) var(--vela-radius); background: color-mix(in srgb, var(--vela-surface) calc(var(--vela-controls-opacity) * 100%), transparent); backdrop-filter: blur(var(--vela-blur)) saturate(1.15); }
+.vela-control-group { display: flex; align-items: center; min-width: 0; }
+.vela-control-group.right { margin-left: auto; }
+.vela-icon-button,.vela-settings-button { height: 34px; min-width: 34px; border: 0; border-radius: max(2px, calc(var(--vela-radius) * .35)); background: transparent; color: rgba(255,255,255,.78); display: grid; place-items: center; cursor: pointer; transition: color .16s ease, background .16s ease; }
+.vela-icon-button:hover,.vela-icon-button.is-active,.vela-settings-button:hover,.vela-settings-button.is-active { color: #fff; background: rgba(255,255,255,.08); }
+.vela-icon-button.primary { color: var(--vela-accent); }
+.vela-volume-cluster { display: flex; align-items: center; }
+.vela-volume-input { width: 0; opacity: 0; margin: 0; accent-color: var(--vela-accent); transition: width .18s ease, opacity .18s ease, margin .18s ease; }
+.vela-volume-cluster:hover .vela-volume-input,.vela-volume-input:focus-visible { width: 62px; opacity: 1; margin-right: 8px; }
+.vela-timecode { display: flex; align-items: center; gap: 6px; padding-left: 5px; white-space: nowrap; color: rgba(255,255,255,.68); font-size: 9px; font-variant-numeric: tabular-nums; }
+.vela-timecode i { color: rgba(255,255,255,.28); font-style: normal; }
+.vela-current-chapter { max-width: min(22vw,180px); margin-left: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgba(255,255,255,.58); font-size: 8px; letter-spacing: .05em; }
+.vela-live-button { height: 30px; margin-left: 6px; padding: 0 8px; border: 0; background: transparent; display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,.68); cursor: pointer; font-size: 8px; letter-spacing: .08em; }
+.vela-live-button span { width: 6px; height: 6px; border-radius: 50%; background: #ff4f4f; }
+.vela-live-button.is-live-edge { color: #fff; }
+.vela-live-button.is-live-edge span { box-shadow: 0 0 0 3px rgba(255,79,79,.15); }
+.vela-settings-menu { position: relative; }
+.vela-settings-button { grid-template-columns: auto 18px; gap: 6px; padding: 0 7px 0 9px; font-size: 8px; letter-spacing: .08em; }
+.vela-settings-button svg { width: 15px; height: 15px; }
+.vela-popover { position: absolute; right: 0; bottom: 42px; z-index: 10; width: min(310px, calc(100vw - 42px)); max-height: min(68vh,520px); overflow: auto; padding: 8px; border: 1px solid rgba(255,255,255,.14); border-radius: max(4px,var(--vela-radius)); background: color-mix(in srgb, var(--vela-surface) 94%, transparent); backdrop-filter: blur(22px); box-shadow: 0 22px 60px rgba(0,0,0,.42); scrollbar-width: thin; }
+.vela-settings-popover section { display: grid; gap: 2px; padding: 6px 0 9px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.vela-settings-popover section:last-child { border-bottom: 0; }
+.vela-settings-popover section > span { padding: 6px 8px; color: color-mix(in srgb, var(--vela-muted) 78%, transparent); font-size: 7px; letter-spacing: .17em; }
+.vela-settings-popover button { min-height: 30px; padding: 6px 8px; border: 0; background: transparent; color: #aaa; text-align: left; cursor: pointer; font-size: 10px; }
+.vela-settings-popover button small { float: right; margin-left: 12px; color: #666; font-size: 8px; }
+.vela-settings-popover button:hover,.vela-settings-popover button.selected { color: #fff; background: rgba(255,255,255,.07); }
+.vela-settings-popover button.selected::after { content: "•"; float: right; color: var(--vela-accent); margin-left: 8px; }
+.vela-settings-popover button.selected small { float: none; margin-left: 8px; }
+.vela-speed-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 3px; padding: 0 5px; }
+.vela-speed-grid button { text-align: center; padding: 6px 3px; }
+.vela-speed-grid button.selected::after { content: none; }
+.vela-setting-label { padding: 7px 8px 2px; color: #62665e; font-size: 7px; letter-spacing: .14em; }
+.vela-shortcuts p { margin: 2px 8px; color: #747870; font-size: 8px; line-height: 1.55; }
+.vela-shortcuts kbd { min-width: 19px; display: inline-grid; place-items: center; margin-right: 2px; padding: 2px 4px; border: 1px solid rgba(255,255,255,.14); border-radius: 2px; background: rgba(255,255,255,.05); color: #bbb; font: inherit; }
+.vela-player::cue { color: var(--vela-caption-color); background: var(--vela-caption-bg); font-family: var(--vela-caption-font); font-size: calc(14px * var(--vela-caption-scale)); line-height: 1.42; text-shadow: var(--vela-caption-edge); }
+
+@media (max-width: 650px) {
+  .vela-player { aspect-ratio: 10 / 7; }
+  .vela-title-block { top: 16px; left: 16px; }
+  .vela-engine-badge { top: 16px; right: 16px; }
+  .vela-media-badges { top: 38px; right: 16px; }
+  .vela-poster-action { left: 16px; bottom: 16px; }
+  .vela-controls { left: 8px; right: 8px; bottom: 8px; }
+  .vela-control-row { padding-inline: 4px; }
+  .vela-timecode span:last-child,.vela-timecode i,.vela-current-chapter,.vela-volume-input,.desktop-only { display: none; }
+  .vela-icon-button { min-width: 31px; width: 31px; }
+  .vela-settings-button > span { display: none; }
+  .vela-settings-button { grid-template-columns: 18px; min-width: 31px; padding: 0; }
+  .vela-popover { position: fixed; left: 12px; right: 12px; bottom: 62px; width: auto; max-height: 60vh; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vela-player *, .vela-player *::before, .vela-player *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

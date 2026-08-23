@@ -1,64 +1,64 @@
 # Vela Player
 
-A minimal, high-end adaptive web video player built with Next.js and React.
+A quiet, high-end adaptive web video player with HLS/DASH playback, live DVR, multilingual media tracks, themeable controls, an embed SDK, and framework-neutral distribution.
 
-## Prototype 02
+## Prototype 03
 
-Vela now separates the streaming engine from the viewing surface. Shaka Player handles adaptive media; Vela owns the interaction model, design system, theme layer, and embedding API.
+Vela keeps the media engine and the viewing surface separate. Shaka Player owns adaptive playback and manifest semantics; Vela owns the interaction model, design system, state/API contract, and distribution layer.
 
 ### Playback
 
 - HLS and MPEG-DASH with automatic source detection
 - adaptive bitrate playback plus manual rendition selection such as 1080p / 720p
-- MP4 fallback
+- multilingual audio-track discovery and selection
 - manifest subtitle tracks plus external WebVTT tracks
+- supplied or manifest-derived chapters with timeline markers and navigation
+- live/DVR timeline based on the real seekable window, live latency, and Go Live control
+- metadata indicators for HDR10, HLG, Dolby Vision, Dolby Audio/Atmos/spatial audio, and BT.2020 when selected tracks advertise those signals
 - WebVTT + sprite-sheet timeline previews
 - playback speed, looping, volume, Picture-in-Picture, fullscreen
-- keyboard shortcuts (`Space`/`K`, arrows, `M`, `C`, `L`, `F`)
 - poster-first composition with lower-left primary play action
 
-### Design
+HDR/Dolby badges report stream/track metadata. They do not add codec support, transcoding, device capability, or Dolby certification.
 
-- runtime theme tokens for accent, surface, foreground, muted color, radius, blur, and control density
-- built-in theme builder on the prototype page
-- responsive desktop/mobile control treatment
+### Input system
 
-### Embedding
+Desktop keyboard:
 
-Vela exposes both a React ref API and a lightweight iframe/browser SDK.
+- `Space` / `K`: play or pause
+- `←` / `→`: seek ±5 seconds
+- `J` / `L`: seek ±10 seconds
+- `↑` / `↓`: volume ±5%
+- `M`: mute
+- `C`: captions
+- `F`: fullscreen
+- `Home`: beginning of the seek window
+- `End`: VOD end or live edge
+- `<` / `>`: playback speed
 
-```html
-<div
-  data-vela-player
-  data-src="https://cdn.example.com/master.m3u8"
-  data-type="hls"
-  data-poster="https://cdn.example.com/poster.jpg"
-  data-accent="#d8ff62"
-></div>
-<script src="https://your-vela-host.example/vela.js" defer></script>
-```
+Touch:
 
-Programmatic control:
+- double tap left/right: seek ±10 seconds
+- double tap center: play/pause
+- horizontal swipe: seek up to ±30 seconds
 
-```js
-const player = Vela.mount("[data-vela-player]");
+### Captions and design
 
-player.play();
-player.pause();
-player.seek(42);
-player.volume(0.7);
-player.quality("auto");
-player.quality(1080);
-player.captions("off");
-player.on("state", (state) => console.log(state));
-```
+Runtime theme tokens cover accent, surface, foreground, muted color, corner radius, blur, and control density. Subtitle styling adds:
 
-The SDK renders `/embed` in an iframe and communicates through a small `postMessage` command/state bridge.
+- font scale
+- foreground color
+- background color/opacity
+- no edge / shadow / outline
+- sans / serif / mono families
 
-## React component
+The prototype page exposes a live Theme + Caption Builder and can copy its configuration as JSON.
+
+## React API
 
 ```tsx
-import { VelaPlayer } from "@/components/VelaPlayer";
+import { VelaPlayer } from "@vela/player/react";
+import "@vela/player/styles.css";
 
 <VelaPlayer
   src="https://cdn.example.com/manifest.mpd"
@@ -69,15 +69,79 @@ import { VelaPlayer } from "@/components/VelaPlayer";
     { src: "/en.vtt", language: "en", label: "English" },
     { src: "/ja.vtt", language: "ja", label: "日本語" },
   ]}
-  theme={{
-    accent: "#d8ff62",
-    radius: 12,
-    blur: 20,
-  }}
 />
 ```
 
-The forwarded ref exposes `play`, `pause`, `seek`, `setVolume`, `setQuality`, `setTextTrack`, and `getState`.
+The forwarded ref exposes:
+
+- `play`, `pause`, `seek`
+- `setVolume`, `setQuality`
+- `setTextTrack`, `setAudioTrack`
+- `setCaptionStyle`
+- `goLive`
+- `nextChapter`, `previousChapter`
+- `getState`
+
+## Browser / iframe SDK
+
+```html
+<div
+  data-vela-player
+  data-src="https://cdn.example.com/master.m3u8"
+  data-type="hls"
+  data-poster="https://cdn.example.com/poster.jpg"
+  data-accent="#d8ff62"
+></div>
+<script src="https://vela.manabeakira.com/vela.js" defer></script>
+```
+
+```js
+const player = Vela.mount("[data-vela-player]");
+player.quality(1080);
+player.audio("track-id");
+player.captionStyle({ fontScale: 1.2, edge: "outline" });
+player.live();
+player.on("state", (state) => console.log(state));
+```
+
+The SDK renders `/embed` in an iframe and communicates through a small `postMessage` command/state bridge.
+
+## Web Component
+
+Without React at the integration layer:
+
+```html
+<script src="https://vela.manabeakira.com/vela-element.js" defer></script>
+
+<vela-player
+  src="https://cdn.example.com/master.m3u8"
+  type="hls"
+  title="Film"
+  accent="#d8ff62">
+</vela-player>
+```
+
+The custom element exposes player methods including `play()`, `pause()`, `seek()`, `setQuality()`, `setAudio()`, `setCaptionStyle()`, and `goLive()`.
+
+## npm package workspace
+
+`packages/vela-player` is prepared as `@vela/player` with three entry points:
+
+- `@vela/player` — framework-neutral iframe controller
+- `@vela/player/react` — React component and types
+- `@vela/player/web-component` — `<vela-player>` custom element
+- `@vela/player/styles.css` — player-only CSS
+
+Build locally with:
+
+```bash
+npm install
+npm run typecheck
+npm run package:build
+npm run build
+```
+
+The package is publish-ready in the repository but is intentionally **not published** by this project workflow. Publishing requires npm authentication and ownership of the selected package scope.
 
 ## Thumbnail VTT
 
@@ -94,14 +158,3 @@ thumbs.jpg#xywh=320,0,320,180
 ```
 
 Only the sprite asset is loaded; timeline movement selects the indexed crop instead of seeking a second video element.
-
-## Development
-
-```bash
-npm install
-npm run dev
-npm run typecheck
-npm run build
-```
-
-The prototype site uses public Shaka demo manifests to exercise real HLS/DASH rendition and multilingual track discovery. GitHub Actions runs both the TypeScript check and the production Next.js build for prototype changes.

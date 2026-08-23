@@ -1,0 +1,48 @@
+{
+  "name": "@vela/player",
+  "version": "0.3.0",
+  "description": "A quiet, themeable HLS/DASH player with React, iframe and Web Component APIs.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js",
+      "require": "./dist/react.cjs"
+    },
+    "./web-component": {
+      "types": "./dist/web-component.d.ts",
+      "import": "./dist/web-component.js",
+      "require": "./dist/web-component.cjs"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "files": ["dist", "README.md"],
+  "sideEffects": ["./dist/web-component.js", "./dist/styles.css"],
+  "scripts": {
+    "build": "tsup && cp ../../styles/player.css dist/styles.css",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "shaka-player": "^5.2.6"
+  },
+  "peerDependencies": {
+    "react": ">=19",
+    "react-dom": ">=19"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true },
+    "react-dom": { "optional": true }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT"
+}

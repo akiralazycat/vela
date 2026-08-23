@@ -8,46 +8,44 @@ export default function Home() {
           <span className="wordmark-mark" aria-hidden="true">◒</span>
           VELA
         </a>
-        <span className="build-label">PLAYER / PROTOTYPE 02</span>
+        <span className="build-label">PLAYER / PROTOTYPE 03</span>
       </header>
 
-      <section className="hero hero-v2" id="top">
+      <section className="hero hero-v3" id="top">
         <div className="hero-copy">
-          <p className="eyebrow">Adaptive video, designed down</p>
+          <p className="eyebrow">A complete playback surface</p>
           <h1>Video, without<br />the chrome.</h1>
           <p className="lede">
-            HLS and MPEG-DASH underneath. A deliberately restrained interface above it.
-            Vela keeps streaming infrastructure powerful and the viewing surface quiet.
+            Adaptive video, multilingual audio, live DVR and accessibility controls underneath.
+            A deliberately quiet surface above it.
           </p>
           <div className="hero-capabilities" aria-label="Core capabilities">
-            <span>HLS</span><span>DASH</span><span>ABR</span><span>SDK</span>
+            <span>HLS</span><span>DASH</span><span>LIVE</span><span>AUDIO</span><span>HDR</span><span>SDK</span>
           </div>
         </div>
 
-        <div className="player-stage">
-          <VelaStudio />
-        </div>
+        <div className="player-stage"><VelaStudio /></div>
       </section>
 
       <section className="principles" aria-labelledby="principles-title">
         <div className="section-index">01</div>
         <div>
-          <p className="eyebrow" id="principles-title">Playback architecture</p>
+          <p className="eyebrow" id="principles-title">Playback model</p>
           <div className="principle-grid">
             <article>
               <span>01</span>
-              <h2>Adaptive by default.</h2>
-              <p>HLS and DASH share one control surface. Automatic bitrate selection remains available, while viewers can pin a real rendition such as 1080p or 720p.</p>
+              <h2>Tracks, not toggles.</h2>
+              <p>Resolution, audio language, subtitles and chapters are exposed as real media tracks. Vela keeps one state model across HLS and DASH.</p>
             </article>
             <article>
               <span>02</span>
-              <h2>Preview, not preload.</h2>
-              <p>Timeline hover reads a WebVTT index and crops a sprite sheet. Scrubbing no longer spins up a second video element just to show a frame.</p>
+              <h2>Live has its own clock.</h2>
+              <p>Live playback uses the seekable DVR window rather than pretending an infinite stream is a VOD. Falling behind reveals a precise Go Live affordance.</p>
             </article>
             <article>
               <span>03</span>
-              <h2>Language is native.</h2>
-              <p>Manifest subtitles and external WebVTT tracks enter the same selector, so multilingual playback does not require a separate UI model.</p>
+              <h2>Metadata stays visible.</h2>
+              <p>HDR10, HLG, Dolby Vision, Dolby Audio and spatial-audio signals surface as restrained badges when the manifest and selected tracks expose them.</p>
             </article>
           </div>
         </div>
@@ -56,34 +54,52 @@ export default function Home() {
       <section className="embed-section" aria-labelledby="embed-title">
         <div className="section-index">02</div>
         <div className="embed-copy">
-          <p className="eyebrow">Embed SDK / API</p>
-          <h2 id="embed-title">One element. Full control.</h2>
+          <p className="eyebrow">Input system</p>
+          <h2 id="embed-title">Keyboard and touch agree.</h2>
           <p>
-            Vela can run as a React component or through the browser SDK. The iframe surface accepts
-            play, pause, seek, volume, quality and caption commands over a small postMessage bridge.
+            J/K/L, arrows, captions, mute and fullscreen map cleanly to desktop. Touch adds double-tap seeking and horizontal scrub gestures without changing the underlying control API.
           </p>
         </div>
-        <pre className="embed-code"><code>{`<div data-vela-player
-  data-src="https://cdn.example.com/master.m3u8"
-  data-type="hls"
-  data-accent="#d8ff62"></div>
-<script src="/vela.js" defer></script>
+        <pre className="embed-code"><code>{`Space / K   Play · Pause
+← / →       Seek ±5s
+J / L       Seek ±10s
+↑ / ↓       Volume ±5%
+C / M / F   Captions · Mute · Fullscreen
+Home / End  Start · Live edge
+Double tap  Seek ±10s
+Swipe       Seek up to ±30s`}</code></pre>
+      </section>
 
-<script>
-  const player = Vela.mount('[data-vela-player]')
-  player.quality(1080).captions('off')
-</script>`}</code></pre>
+      <section className="distribution-section" aria-labelledby="distribution-title">
+        <div className="section-index">03</div>
+        <div className="distribution-copy">
+          <p className="eyebrow">Distribution</p>
+          <h2 id="distribution-title">React optional.</h2>
+          <p>
+            The same player ships as a React component, a framework-neutral iframe controller, and a custom element. The Web Component keeps Vela usable from plain HTML, Vue, Svelte or any other DOM environment.
+          </p>
+        </div>
+        <pre className="distribution-code"><code>{`import "@vela/player/web-component";
+
+<vela-player
+  src="https://cdn.example.com/master.m3u8"
+  type="hls"
+  accent="#d8ff62">
+</vela-player>
+
+// or
+import { VelaPlayer } from "@vela/player/react";`}</code></pre>
       </section>
 
       <section className="spec-strip" aria-label="Prototype features">
-        <span>HLS / DASH</span>
-        <span>ABR + MANUAL QUALITY</span>
-        <span>SPRITE / VTT PREVIEW</span>
-        <span>MULTI-SUBTITLE</span>
-        <span>THEME BUILDER</span>
-        <span>IFRAME SDK</span>
-        <span>REACT REF API</span>
-        <span>PIP / FULLSCREEN</span>
+        <span>MULTI-AUDIO</span>
+        <span>HDR / DOLBY SIGNALS</span>
+        <span>LIVE DVR</span>
+        <span>CHAPTERS</span>
+        <span>CAPTION STYLES</span>
+        <span>KEYBOARD / GESTURES</span>
+        <span>NPM PACKAGE</span>
+        <span>WEB COMPONENT</span>
       </section>
     </main>
   );

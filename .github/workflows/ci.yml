@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - feat/vela-player-prototype
+      - feat/vela-player-v3
   pull_request:
 
 jobs:
@@ -17,4 +17,5 @@ jobs:
           node-version: 22
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
+      - run: npm run package:build
       - run: npm run build
