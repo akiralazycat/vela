@@ -75,6 +75,11 @@
   VelaEmbed.prototype.volume = function (value) { return this.command("volume", value); };
   VelaEmbed.prototype.quality = function (value) { return this.command("quality", value); };
   VelaEmbed.prototype.captions = function (value) { return this.command("captions", value); };
+  VelaEmbed.prototype.audio = function (value) { return this.command("audio", value); };
+  VelaEmbed.prototype.captionStyle = function (value) { return this.command("captionStyle", value); };
+  VelaEmbed.prototype.live = function () { return this.command("live"); };
+  VelaEmbed.prototype.nextChapter = function () { return this.command("nextChapter"); };
+  VelaEmbed.prototype.previousChapter = function () { return this.command("previousChapter"); };
   VelaEmbed.prototype.getState = function () { return this.state; };
   VelaEmbed.prototype.destroy = function () {
     window.removeEventListener("message", this._onMessage);
@@ -82,7 +87,7 @@
   };
 
   var Vela = {
-    version: "0.2.0",
+    version: "0.3.0",
     mount: function (target, options) { return new VelaEmbed(target, options); },
   };
 
