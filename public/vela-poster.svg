@@ -1,0 +1,28 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky" x1="800" y1="0" x2="800" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#383D33"/>
+      <stop offset="0.48" stop-color="#1F231C"/>
+      <stop offset="1" stop-color="#080A08"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1160 220) rotate(111.3) scale(380 540)">
+      <stop stop-color="#E8F6C6" stop-opacity="0.56"/>
+      <stop offset="1" stop-color="#E8F6C6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ridge" x1="774" y1="388" x2="778" y2="856" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5B6251"/>
+      <stop offset="1" stop-color="#10130F"/>
+    </linearGradient>
+    <filter id="blur" x="800" y="-80" width="720" height="720" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="70"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="900" fill="url(#sky)"/>
+  <ellipse cx="1160" cy="220" rx="270" ry="190" fill="url(#glow)" filter="url(#blur)"/>
+  <path d="M0 675C172 640 251 590 386 603C499 615 572 687 710 639C839 594 879 493 1016 467C1160 440 1245 510 1375 505C1472 501 1520 462 1600 452V900H0V675Z" fill="url(#ridge)"/>
+  <path d="M0 744C159 710 270 723 408 756C542 788 684 790 816 748C961 702 1058 662 1204 687C1350 712 1452 773 1600 747V900H0V744Z" fill="#11140F"/>
+  <path d="M1081 188C1091 154 1118 127 1152 117C1186 107 1223 115 1250 138" stroke="#E8F6C6" stroke-opacity="0.34" stroke-width="2"/>
+  <circle cx="1180" cy="154" r="4" fill="#D8FF62"/>
+  <text x="76" y="100" fill="#EDEFE6" fill-opacity="0.68" font-size="18" font-family="Arial, Helvetica, sans-serif" letter-spacing="5">VELA / DRIFT 01</text>
+  <text x="1522" y="820" fill="#EDEFE6" fill-opacity="0.38" font-size="14" text-anchor="end" font-family="Arial, Helvetica, sans-serif" letter-spacing="4">35.6762° N</text>
+</svg>
