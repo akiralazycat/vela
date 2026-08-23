@@ -104,4 +104,4 @@ npm run typecheck
 npm run build
 ```
 
-The prototype site uses public Shaka demo manifests to exercise real HLS/DASH rendition and multilingual track discovery.
+The prototype site uses public Shaka demo manifests to exercise real HLS/DASH rendition and multilingual track discovery. GitHub Actions runs both the TypeScript check and the production Next.js build for prototype changes.
