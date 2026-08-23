@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { VelaPlayer, type VelaPlayerHandle, type VelaPlayerState, type VelaSourceType } from "@/components/VelaPlayer";
+import {
+  VelaPlayer,
+  type VelaCaptionStyle,
+  type VelaPlayerHandle,
+  type VelaPlayerState,
+  type VelaSourceType,
+} from "@/components/VelaPlayer";
 
 type EmbedProps = {
   src: string;
@@ -14,8 +20,19 @@ type EmbedProps = {
 
 type VelaCommand = {
   type: "vela:command";
-  command: "play" | "pause" | "seek" | "volume" | "quality" | "captions";
-  value?: number | string;
+  command:
+    | "play"
+    | "pause"
+    | "seek"
+    | "volume"
+    | "quality"
+    | "captions"
+    | "audio"
+    | "captionStyle"
+    | "live"
+    | "nextChapter"
+    | "previousChapter";
+  value?: number | string | Partial<VelaCaptionStyle>;
 };
 
 export function VelaEmbedClient({ src, sourceType, poster, title, accent, thumbnailVtt }: EmbedProps) {
@@ -33,6 +50,11 @@ export function VelaEmbedClient({ src, sourceType, poster, title, accent, thumbn
       else if (command === "volume" && typeof value === "number") api.setVolume(value);
       else if (command === "quality" && (typeof value === "number" || value === "auto")) api.setQuality(value);
       else if (command === "captions" && typeof value === "string") api.setTextTrack(value);
+      else if (command === "audio" && typeof value === "string") api.setAudioTrack(value);
+      else if (command === "captionStyle" && value && typeof value === "object") api.setCaptionStyle(value as Partial<VelaCaptionStyle>);
+      else if (command === "live") api.goLive();
+      else if (command === "nextChapter") api.nextChapter();
+      else if (command === "previousChapter") api.previousChapter();
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
