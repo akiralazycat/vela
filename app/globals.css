@@ -9,13 +9,67 @@
   --house-signal: #d8ff62;
   --house-focus: #d8ff62;
 }
-.house-bar { min-height: 30px; padding: 0 clamp(18px, 4vw, 48px); display: flex; align-items: center; justify-content: space-between; gap: 20px; position: relative; z-index: 100; border-bottom: 1px solid var(--house-line); background: var(--house-surface); color: var(--house-muted); backdrop-filter: blur(18px); font: 650 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .12em; text-transform: uppercase; }
-.house-bar a { display: inline-flex; align-items: center; gap: 8px; color: var(--house-text); text-decoration: none; }
-.house-bar a:hover { color: var(--house-signal); }
-.house-bar a:focus-visible { outline: 2px solid var(--house-focus); outline-offset: 3px; }
-.house-bar__mark { width: 7px; height: 7px; border: 1px solid currentColor; border-radius: 2px; box-shadow: 3px -3px 0 -1px var(--house-surface), 3px -3px 0 0 currentColor; }
-.house-bar__product { color: var(--house-muted); }
 ::selection { background: color-mix(in srgb, var(--house-signal) 26%, transparent); color: var(--house-text); }
 :where(button, a, input, textarea, select):focus-visible { outline: 2px solid var(--house-focus); outline-offset: 3px; }
-@media (max-width: 560px) { .house-bar { min-height: 28px; } .house-bar__product { display: none; } }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto !important; } *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+
+/* House v1: shared typography and spacing contract. */
+:root {
+  --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", "Roboto Mono", "Noto Sans Mono", Menlo, Consolas, monospace;
+  --font-editorial: ui-serif, "New York", Georgia, "Times New Roman", serif;
+  --text-decorative: 10px;
+  --text-meta: 11px;
+  --text-label: 12px;
+  --text-control: 13px;
+  --text-body-sm: 14px;
+  --text-body: 16px;
+  --text-lede: clamp(17px, 1.5vw, 20px);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-10: 128px;
+  --page-gutter: clamp(20px, 5vw, 72px);
+  --section-space: clamp(64px, 8vw, 112px);
+  --card-padding: clamp(16px, 2vw, 24px);
+  --content-max: 1480px;
+  --header-height: 72px;
+  --toolbar-height: 64px;
+}
+
+body, .vela-player { font-family: var(--font-ui); }
+body { line-height: 1.55; }
+p { max-width: 68ch; }
+.site-header { height: var(--header-height); padding-inline: var(--page-gutter); }
+.hero { width: min(var(--content-max), 100%); padding-inline: var(--page-gutter); }
+.principles, .embed-section, .distribution-section, .spec-strip { padding-inline: var(--page-gutter); }
+.principles, .embed-section, .distribution-section { padding-block: var(--section-space); }
+
+.build-label, .stage-meta, .section-index, .spec-strip, .eyebrow, .studio-toolbar, .hero-capabilities,
+.vela-title-block span, .vela-engine-badge, .vela-media-badges span, .vela-start-copy small, .vela-error small,
+.vela-timecode, .vela-current-chapter, .vela-live-button, .vela-settings-button,
+.vela-settings-popover section > span, .vela-settings-popover button small, .vela-setting-label, .vela-shortcuts p {
+  font-size: var(--text-meta);
+  line-height: 1.45;
+  letter-spacing: .08em;
+}
+
+.studio-protocol-switch button, .copy-config, .vela-settings-popover button { min-height: 40px; font-size: var(--text-label); }
+.theme-controls select { min-height: 40px; font-size: var(--text-control); }
+.vela-icon-button, .vela-settings-button { min-width: 40px; min-height: 40px; height: 40px; }
+.vela-player::cue { font-family: var(--font-ui); font-size: calc(16px * var(--vela-caption-scale)); line-height: 1.45; }
+
+@media (max-width: 650px) {
+  .site-header { height: var(--header-height); }
+}
+
+@media (pointer: coarse) {
+  .studio-protocol-switch button, .copy-config, .vela-settings-popover button,
+  .vela-icon-button, .vela-settings-button, .theme-controls select { min-width: 44px; min-height: 44px; height: 44px; }
+}

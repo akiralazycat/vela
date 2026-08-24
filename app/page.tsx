@@ -1,10 +1,8 @@
 import { VelaStudio } from "@/components/VelaStudio";
-import { HouseBar } from "@/components/house-bar";
 
 export default function Home() {
   return (
     <>
-      <HouseBar product="Vela" />
       <main className="site-shell">
       <header className="site-header">
         <a className="wordmark" href="#top" aria-label="Vela home">
