@@ -10,10 +10,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
-      <body>
-        <script src="/vela-playback-signals.js" defer />
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

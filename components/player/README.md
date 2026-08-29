@@ -1,10 +1,10 @@
 # Vela player presentation split
 
-`components/VelaPlayer.tsx` is the public facade. Playback behavior remains isolated in `components/VelaPlayerCore.tsx` while presentation concerns move into small React components under this directory.
+`components/VelaPlayer.tsx` is the public facade. Playback behavior remains isolated in `components/VelaPlayerCore.tsx` while presentation concerns live in small React components under this directory.
 
 ## Current boundary
 
-- `PlayerFrame.tsx` owns the display preset boundary (`default` / `minimal`).
+- `PlayerFrame.tsx` owns the display preset boundary (`default` / `minimal`) and mounts the contextual playback signal surface.
 - `PlayerModeSwitch.tsx` owns the optional demo/editor switch.
 - `PlayerPresentationContext.tsx` carries current playback state and presentation mode without prop drilling.
 - `Timeline.tsx` owns seek geometry, chapter markers, DVR window context, pointer/touch scrubbing state, and the range input.
@@ -16,11 +16,14 @@
 - `SubtitleSettings.tsx` owns subtitle language naming, type metadata (`Subtitles` / `CC` / `SDH` / `Forced` when inferable), track summary, active-track presentation, and language-switch confirmation.
 - `AccessibilitySettings.tsx` owns caption preview, Default / Contrast / Large presets, and size / edge / background controls.
 - `LiveStatus.tsx` owns live-edge / behind-edge labeling, Go Live semantics, accessible status text, and the return-to-live confirmation surface.
-- `VelaPlayerCore.tsx` owns Shaka integration, playback state, gestures, and imperative API behavior, but no longer owns timeline, control/action dock, settings, audio, subtitle, accessibility, or live-status presentation markup.
+- `PlaybackSignals.tsx` owns contextual live / quality / audio / chapter / media signals, actual decoded-height tracking, and the quick Audio / Return-to-Live affordances.
+- `VelaPlayerCore.tsx` owns Shaka integration, playback state, gestures, and imperative API behavior, but no longer owns the extracted presentation surfaces above.
 
-## Compatibility scripts
+## Presentation runtime
 
-`public/vela-timeline-preview.js`, `public/vela-settings-layer.js`, `public/vela-audio-ux.js`, `public/vela-subtitle-ux.js`, and `public/vela-live-ux.js` have been retired. Timeline preview, DVR context, settings navigation, multilingual audio, subtitles, caption accessibility, and live-status presentation are now React-owned. Only the playback-signal bridge remains temporarily enabled; it still owns the contextual signal rail and routes its interactive Audio and DVR chips into the React UI.
+The presentation migration is complete. `public/vela-timeline-preview.js`, `public/vela-settings-layer.js`, `public/vela-audio-ux.js`, `public/vela-subtitle-ux.js`, `public/vela-live-ux.js`, and `public/vela-playback-signals.js` have all been retired. `app/layout.tsx` no longer loads presentation scripts; timeline preview, settings, multilingual audio, subtitles/accessibility, live DVR, and playback intelligence are React-owned.
+
+The remaining CSS compatibility layers intentionally preserve the established selectors and visual geometry while component ownership is now explicit. They can be consolidated later without reintroducing DOM observers or runtime presentation scripts.
 
 ## Migration order
 
@@ -30,4 +33,4 @@
 4. ~~`AudioSettings`~~
 5. ~~`SubtitleSettings` + `AccessibilitySettings`~~
 6. ~~`LiveStatus` + DVR affordances~~
-7. remove the remaining temporary playback-signal DOM bridge from `app/layout.tsx`
+7. ~~`PlaybackSignals` + remove presentation scripts from `app/layout.tsx`~~

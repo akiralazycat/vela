@@ -1,7 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import type { VelaPlayerState } from "../VelaPlayerCore";
+import { PlaybackSignals } from "./PlaybackSignals";
 import { PlayerModeSwitch } from "./PlayerModeSwitch";
 import { PlayerPresentationProvider } from "./PlayerPresentationContext";
 import type { VelaDisplayMode } from "./presentation";
@@ -21,14 +22,17 @@ export function PlayerFrame({
   showModeSwitch,
   onDisplayModeChange,
 }: PlayerFrameProps) {
+  const frameRef = useRef<HTMLDivElement>(null);
+
   return (
     <PlayerPresentationProvider
       displayMode={displayMode}
       playerState={playerState}
       setDisplayMode={onDisplayModeChange}
     >
-      <div className="vela-display-frame" data-vela-display={displayMode}>
+      <div ref={frameRef} className="vela-display-frame" data-vela-display={displayMode}>
         {children}
+        <PlaybackSignals frameRef={frameRef} playerState={playerState} />
         {showModeSwitch ? (
           <PlayerModeSwitch value={displayMode} onChange={onDisplayModeChange} />
         ) : null}
