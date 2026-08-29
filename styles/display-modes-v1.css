@@ -1,0 +1,136 @@
+/* Phase 07 — two intentional chrome presets. Default keeps the full Vela surface;
+   Minimal removes nonessential chrome while preserving playback, scrubbing and fullscreen. */
+.vela-display-frame {
+  display: grid;
+  gap: 10px;
+}
+
+.vela-display-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+}
+
+.vela-display-switch {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(74px, 1fr));
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .035);
+}
+
+.vela-display-switch button {
+  min-height: 28px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, .46);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 520;
+  letter-spacing: .025em;
+  transition: background .16s ease, color .16s ease, box-shadow .16s ease;
+}
+
+.vela-display-switch button:hover {
+  color: rgba(255, 255, 255, .8);
+}
+
+.vela-display-switch button.is-active {
+  background: rgba(255, 255, 255, .11);
+  color: rgba(255, 255, 255, .94);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+/* Minimal intentionally hides diagnostic and secondary playback chrome. */
+.vela-display-frame[data-vela-display="minimal"] .vela-title-block,
+.vela-display-frame[data-vela-display="minimal"] .vela-engine-badge,
+.vela-display-frame[data-vela-display="minimal"] .vela-media-badges,
+.vela-display-frame[data-vela-display="minimal"] .vela-volume-cluster,
+.vela-display-frame[data-vela-display="minimal"] .vela-timecode,
+.vela-display-frame[data-vela-display="minimal"] .vela-control-group.right > button[aria-label="Toggle captions"],
+.vela-display-frame[data-vela-display="minimal"] .vela-control-group.right > button[aria-label="Toggle loop"],
+.vela-display-frame[data-vela-display="minimal"] .vela-settings-menu,
+.vela-display-frame[data-vela-display="minimal"] .vela-control-group.right > .desktop-only {
+  display: none !important;
+}
+
+.vela-display-frame[data-vela-display="minimal"] .vela-control-row {
+  padding-inline: 10px;
+}
+
+.vela-display-frame[data-vela-display="minimal"] .vela-timeline-wrap {
+  left: 62px;
+  right: 18px;
+}
+
+/* Live keeps its Go Live affordance even in Minimal; without it DVR playback could
+   drift behind the live edge with no visible way home. */
+.vela-display-frame[data-vela-display="minimal"] .vela-player.is-live .vela-timeline-wrap {
+  left: 132px;
+}
+
+.vela-display-frame[data-vela-display="minimal"] .vela-control-group.right > .vela-icon-button:last-child {
+  display: grid;
+}
+
+/* Before playback, Minimal becomes a single centered play affordance. */
+.vela-display-frame[data-vela-display="minimal"] .vela-poster-action {
+  left: 50%;
+  bottom: 50%;
+  transform: translate(-50%, 50%);
+}
+
+.vela-display-frame[data-vela-display="minimal"] .vela-start-copy {
+  display: none;
+}
+
+.vela-display-frame[data-vela-display="minimal"] .vela-start-icon {
+  width: clamp(52px, 6vw, 72px);
+  background: rgba(10, 10, 10, .58);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, .24);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .28), inset 0 1px 0 rgba(255, 255, 255, .09);
+  backdrop-filter: blur(18px) saturate(1.18);
+  -webkit-backdrop-filter: blur(18px) saturate(1.18);
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .vela-display-switch button {
+    min-height: 34px;
+    padding-inline: 16px;
+    touch-action: manipulation;
+  }
+
+  .vela-display-frame[data-vela-display="minimal"] .vela-control-row {
+    padding-inline: 6px;
+  }
+
+  .vela-display-frame[data-vela-display="minimal"] .vela-timeline-wrap {
+    left: 58px;
+    right: 12px;
+  }
+
+  .vela-display-frame[data-vela-display="minimal"] .vela-player.is-live .vela-timeline-wrap {
+    left: 124px;
+  }
+}
+
+@media (max-width: 390px) and (hover: none) and (pointer: coarse) {
+  .vela-display-frame[data-vela-display="minimal"] .vela-timeline-wrap {
+    left: 54px;
+    right: 10px;
+  }
+
+  .vela-display-frame[data-vela-display="minimal"] .vela-player.is-live .vela-timeline-wrap {
+    left: 116px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vela-display-switch button { transition: none; }
+}

@@ -57,8 +57,11 @@ const initialCaptionStyle: VelaCaptionStyle = {
   fontFamily: "sans",
 };
 
+type DisplayMode = "default" | "minimal";
+
 export function VelaStudio() {
   const [mode, setMode] = useState<keyof typeof sources>("dash");
+  const [displayMode, setDisplayMode] = useState<DisplayMode>("default");
   const [theme, setTheme] = useState(initialTheme);
   const [captionStyle, setCaptionStyle] = useState(initialCaptionStyle);
   const [copied, setCopied] = useState(false);
@@ -101,19 +104,37 @@ export function VelaStudio() {
         <span>AUDIO / CHAPTERS / LIVE DVR / HDR SIGNALS</span>
       </div>
 
-      <VelaPlayer
-        key={mode}
-        title={source.title}
-        eyebrow={mode === "live" ? "VELA LIVE" : "VELA STREAM"}
-        src={source.src}
-        sourceType={source.type}
-        poster={mode === "live" ? undefined : "/vela-poster.svg"}
-        textTracks={mode === "live" ? undefined : extraTracks}
-        thumbnailVtt={mode === "live" ? undefined : "/demo-thumbnails.vtt"}
-        chapters={mode === "live" ? undefined : demoChapters}
-        captionStyle={captionStyle}
-        theme={theme}
-      />
+      <div className="vela-display-frame" data-vela-display={displayMode}>
+        <VelaPlayer
+          key={mode}
+          title={source.title}
+          eyebrow={mode === "live" ? "VELA LIVE" : "VELA STREAM"}
+          src={source.src}
+          sourceType={source.type}
+          poster={mode === "live" ? undefined : "/vela-poster.svg"}
+          textTracks={mode === "live" ? undefined : extraTracks}
+          thumbnailVtt={mode === "live" ? undefined : "/demo-thumbnails.vtt"}
+          chapters={mode === "live" ? undefined : demoChapters}
+          captionStyle={captionStyle}
+          theme={theme}
+        />
+
+        <div className="vela-display-switch-row">
+          <div className="vela-display-switch" role="group" aria-label="Player display mode">
+            {(["default", "minimal"] as const).map((item) => (
+              <button
+                key={item}
+                type="button"
+                className={displayMode === item ? "is-active" : ""}
+                aria-pressed={displayMode === item}
+                onClick={() => setDisplayMode(item)}
+              >
+                {item === "default" ? "Default" : "Minimal"}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       <div className="stage-meta" aria-label="Demo details">
         <span>MULTILINGUAL AUDIO</span>
