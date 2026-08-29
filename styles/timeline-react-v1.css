@@ -1,0 +1,50 @@
+/* React-owned timeline presentation. This layer replaces the former DOM preview enhancer. */
+.vela-timeline-wrap[data-vela-timeline-owner="react"] {
+  --vela-preview-anchor-opacity: 0;
+}
+
+.vela-player.is-live .vela-preview[data-vela-preview-owner="react"]::before,
+.vela-player.is-live .vela-preview[data-vela-preview-owner="react"]::after {
+  content: none;
+  background: none;
+}
+
+.vela-player.is-live .vela-preview[data-vela-preview-owner="react"] > .vela-live-preview-kicker,
+.vela-player.is-live .vela-preview[data-vela-preview-owner="react"] > .vela-live-preview-label {
+  position: static;
+  display: inline-flex;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  transform: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.vela-player.is-live .vela-preview[data-vela-preview-owner="react"] > .vela-live-preview-kicker {
+  color: rgba(255, 255, 255, .42);
+  font-size: 7px;
+  font-weight: 620;
+  letter-spacing: .08em;
+}
+
+.vela-player.is-live .vela-preview[data-vela-preview-owner="react"][data-vela-live-preview-state="edge"] > .vela-live-preview-kicker {
+  color: rgba(255, 93, 93, .78);
+}
+
+.vela-player.is-live .vela-preview[data-vela-preview-owner="react"] > .vela-live-preview-label {
+  color: rgba(255, 255, 255, .92);
+  font-size: 11px;
+  font-weight: 580;
+  letter-spacing: -.01em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vela-timeline-wrap[data-vela-timeline-owner="react"] .vela-preview {
+    transition: none;
+  }
+}

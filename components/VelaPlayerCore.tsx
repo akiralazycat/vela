@@ -12,7 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { findThumbnailCue, loadThumbnailVtt, type ThumbnailCue } from "../lib/thumbnail-vtt";
+import { Timeline } from "./player/Timeline";
 
 export type VelaSourceType = "auto" | "hls" | "dash" | "mp4";
 
@@ -379,7 +379,6 @@ export const VelaPlayer = forwardRef<VelaPlayerHandle, VelaPlayerProps>(function
   const [volume, setVolumeState] = useState(0.82);
   const [muted, setMuted] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
-  const [preview, setPreview] = useState<{ x: number; time: number } | null>(null);
   const [speed, setSpeed] = useState(1);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [loop, setLoop] = useState(false);
@@ -391,8 +390,6 @@ export const VelaPlayer = forwardRef<VelaPlayerHandle, VelaPlayerProps>(function
   const [selectedAudio, setSelectedAudio] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [thumbnailCues, setThumbnailCues] = useState<ThumbnailCue[]>([]);
-  const [spriteSize, setSpriteSize] = useState<{ width: number; height: number } | null>(null);
   const [resolvedChapters, setResolvedChapters] = useState<VelaChapter[]>(chapters);
   const [isLive, setIsLive] = useState(false);
   const [seekWindow, setSeekWindow] = useState({ start: 0, end: 0 });
@@ -403,8 +400,6 @@ export const VelaPlayer = forwardRef<VelaPlayerHandle, VelaPlayerProps>(function
   const timelineStart = isLive ? seekWindow.start : 0;
   const timelineEnd = isLive ? seekWindow.end : duration;
   const timelineSpan = Math.max(timelineEnd - timelineStart, 0);
-  const progress = timelineSpan ? clamp(((currentTime - timelineStart) / timelineSpan) * 100, 0, 100) : 0;
-  const bufferedProgress = timelineSpan ? clamp(((buffered - timelineStart) / timelineSpan) * 100, 0, 100) : 0;
   const atLiveEdge = isLive ? seekWindow.end - currentTime <= 2.5 : false;
 
   const currentChapter = useMemo(() => {
@@ -710,33 +705,6 @@ export const VelaPlayer = forwardRef<VelaPlayerHandle, VelaPlayerProps>(function
   ]);
 
   useEffect(() => {
-    if (!thumbnailVtt) {
-      setThumbnailCues([]);
-      setSpriteSize(null);
-      return;
-    }
-
-    const controller = new AbortController();
-    loadThumbnailVtt(thumbnailVtt, controller.signal)
-      .then(setThumbnailCues)
-      .catch(() => setThumbnailCues([]));
-    return () => controller.abort();
-  }, [thumbnailVtt]);
-
-  useEffect(() => {
-    const first = thumbnailCues[0];
-    if (!first || typeof window === "undefined") {
-      setSpriteSize(null);
-      return;
-    }
-
-    const image = new Image();
-    image.onload = () => setSpriteSize({ width: image.naturalWidth, height: image.naturalHeight });
-    image.onerror = () => setSpriteSize(null);
-    image.src = first.url;
-  }, [thumbnailCues]);
-
-  useEffect(() => {
     const video = videoRef.current;
     if (video) video.loop = loop && !isLive;
   }, [isLive, loop]);
@@ -947,12 +915,6 @@ export const VelaPlayer = forwardRef<VelaPlayerHandle, VelaPlayerProps>(function
     else if (event.key === "<") onSpeedChange(Math.max(0.5, speed - 0.25));
   };
 
-  const handleTimelineMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const ratio = clamp((event.clientX - rect.left) / rect.width, 0, 1);
-    setPreview({ x: ratio * 100, time: timelineStart + ratio * timelineSpan });
-  };
-
   const updateRuntime = (video: HTMLVideoElement) => {
     setCurrentTime(video.currentTime);
     const player = shakaRef.current;
@@ -1030,27 +992,6 @@ export const VelaPlayer = forwardRef<VelaPlayerHandle, VelaPlayerProps>(function
       scheduleControls();
     }
   };
-
-  const previewCue = preview ? findThumbnailCue(thumbnailCues, preview.time) : null;
-  const previewImageStyle = useMemo<CSSProperties | undefined>(() => {
-    if (!previewCue) return undefined;
-    const base: CSSProperties = { backgroundImage: `url("${previewCue.url}")` };
-
-    if (
-      spriteSize && previewCue.width && previewCue.height &&
-      previewCue.x !== undefined && previewCue.y !== undefined
-    ) {
-      const xDenominator = Math.max(spriteSize.width - previewCue.width, 1);
-      const yDenominator = Math.max(spriteSize.height - previewCue.height, 1);
-      return {
-        ...base,
-        backgroundSize: `${(spriteSize.width / previewCue.width) * 100}% ${(spriteSize.height / previewCue.height) * 100}%`,
-        backgroundPosition: `${(previewCue.x / xDenominator) * 100}% ${(previewCue.y / yDenominator) * 100}%`,
-      };
-    }
-
-    return { ...base, backgroundSize: "cover", backgroundPosition: "center" };
-  }, [previewCue, spriteSize]);
 
   return (
     <div
@@ -1137,40 +1078,16 @@ export const VelaPlayer = forwardRef<VelaPlayerHandle, VelaPlayerProps>(function
       </div>
 
       <div className="vela-controls" onPointerEnter={() => setControlsVisible(true)}>
-        <div className="vela-timeline-wrap" onPointerMove={handleTimelineMove} onPointerLeave={() => setPreview(null)}>
-          {preview ? (
-            <div className="vela-preview" style={{ left: `${preview.x}%` }}>
-              {previewImageStyle ? <div className="vela-preview-image" style={previewImageStyle} /> : <div className="vela-preview-empty" />}
-              <span>{isLive ? `-${formatTime(Math.max(timelineEnd - preview.time, 0))}` : formatTime(preview.time)}</span>
-            </div>
-          ) : null}
-
-          <div className="vela-timeline" aria-hidden="true">
-            <span className="vela-buffered" style={{ width: `${bufferedProgress}%` }} />
-            <span className="vela-progress" style={{ width: `${progress}%` }} />
-            {resolvedChapters.map((chapter) => {
-              if (!timelineSpan || chapter.start < timelineStart || chapter.start > timelineEnd) return null;
-              return (
-                <span
-                  key={chapter.id ?? `${chapter.start}-${chapter.title}`}
-                  className="vela-chapter-marker"
-                  style={{ left: `${((chapter.start - timelineStart) / timelineSpan) * 100}%` }}
-                />
-              );
-            })}
-          </div>
-
-          <input
-            className="vela-seek-input"
-            type="range"
-            min={timelineStart}
-            max={timelineEnd || timelineStart}
-            step="0.01"
-            value={clamp(currentTime, timelineStart, timelineEnd || timelineStart)}
-            onChange={(event) => seekTo(Number(event.target.value))}
-            aria-label={isLive ? "Seek live DVR window" : "Seek video"}
-          />
-        </div>
+        <Timeline
+          currentTime={currentTime}
+          buffered={buffered}
+          duration={duration}
+          isLive={isLive}
+          seekWindow={seekWindow}
+          chapters={resolvedChapters}
+          thumbnailVtt={thumbnailVtt}
+          onSeek={seekTo}
+        />
 
         <div className="vela-control-row">
           <div className="vela-control-group">
