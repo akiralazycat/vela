@@ -23,10 +23,27 @@
    The timeline stays a sibling in the DOM for now, but is positioned through the
    middle of the glass bar so playback logic and accessibility remain untouched. */
 .vela-controls {
+  top: clamp(12px, 2vw, 20px);
   left: clamp(12px, 2vw, 20px);
   right: clamp(12px, 2vw, 20px);
   bottom: clamp(12px, 2vw, 20px);
   min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.vela-player.has-started.is-controls-visible .vela-controls {
+  pointer-events: none;
+}
+
+.vela-control-row,
+.vela-timeline-wrap,
+.vela-popover,
+.vela-control-row button,
+.vela-control-row input {
+  pointer-events: auto;
 }
 
 .vela-control-row {
@@ -52,6 +69,7 @@
 }
 
 .vela-control-group.right {
+  position: static;
   padding-left: 8px;
 }
 
@@ -102,12 +120,12 @@
 .vela-timeline-wrap {
   position: absolute;
   z-index: 2;
-  top: 50%;
+  top: auto;
   left: 150px;
-  right: 204px;
-  bottom: auto;
+  right: 154px;
+  bottom: 13px;
   height: 34px;
-  transform: translateY(-50%);
+  transform: none;
   align-items: center;
 }
 
@@ -182,6 +200,53 @@
   border-radius: 18px;
 }
 
+/* Phase 03 — promote viewing-surface actions out of the transport dock. The
+   existing PiP and fullscreen controls become a separate top-right glass dock;
+   captions, loop and settings remain in the transport row for the next pass. */
+.vela-control-group.right > .desktop-only,
+.vela-control-group.right > .vela-icon-button:last-child {
+  position: absolute;
+  z-index: 7;
+  top: 0;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  background: color-mix(in srgb, var(--vela-surface) 70%, rgba(255, 255, 255, .18));
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, .22),
+    inset 0 1px 0 rgba(255, 255, 255, .1);
+  backdrop-filter: blur(calc(var(--vela-blur) + 6px)) saturate(1.3);
+  -webkit-backdrop-filter: blur(calc(var(--vela-blur) + 6px)) saturate(1.3);
+}
+
+.vela-control-group.right > .desktop-only {
+  right: 43px;
+  border-right-color: rgba(255, 255, 255, .08);
+  border-radius: 999px 0 0 999px;
+}
+
+.vela-control-group.right > .vela-icon-button:last-child {
+  right: 0;
+  border-left-color: transparent;
+  border-radius: 0 999px 999px 0;
+}
+
+.vela-control-group.right > .desktop-only:hover,
+.vela-control-group.right > .vela-icon-button:last-child:hover {
+  background: color-mix(in srgb, var(--vela-surface) 62%, rgba(255, 255, 255, .28));
+}
+
+/* Until stream metadata moves into Playback information, keep it clear of the
+   new action dock rather than letting developer-facing badges collide with it. */
+.vela-engine-badge {
+  top: clamp(70px, 8vw, 86px);
+}
+
+.vela-media-badges {
+  top: clamp(92px, 10.5vw, 110px);
+}
+
 @media (max-width: 650px) {
   .vela-player {
     aspect-ratio: 16 / 9;
@@ -192,6 +257,7 @@
   }
 
   .vela-controls {
+    top: 8px;
     left: 8px;
     right: 8px;
     bottom: 8px;
@@ -222,7 +288,8 @@
 
   .vela-timeline-wrap {
     left: 96px;
-    right: 132px;
+    right: 108px;
+    bottom: 11px;
     height: 30px;
   }
 
@@ -241,6 +308,21 @@
     bottom: calc(100% + 10px);
     border-radius: 14px;
   }
+
+  .vela-control-group.right > .vela-icon-button:last-child {
+    top: 0;
+    right: 0;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    border-left-color: rgba(255, 255, 255, .22);
+    border-radius: 999px;
+  }
+
+  .vela-engine-badge,
+  .vela-media-badges {
+    display: none;
+  }
 }
 
 @media (max-width: 420px) {
@@ -250,6 +332,6 @@
 
   .vela-timeline-wrap {
     left: 88px;
-    right: 126px;
+    right: 102px;
   }
 }
