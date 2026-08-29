@@ -1,0 +1,151 @@
+/* Phase 04 — progressive disclosure for playback settings. The root view stays
+   deliberately small; detailed track, chapter and accessibility controls keep
+   using the existing sections behind a lightweight navigation layer. */
+.vela-settings-popover[data-vela-layered="true"] {
+  width: min(300px, calc(100vw - 42px));
+  max-height: min(68vh, 500px);
+  padding: 6px;
+  overflow: auto;
+}
+
+.vela-settings-popover[data-vela-layered="true"] > section > span:first-child {
+  display: none;
+}
+
+.vela-settings-layer {
+  display: grid;
+  min-width: 0;
+}
+
+.vela-settings-layer-header {
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: 34px 1fr 34px;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.vela-settings-layer-header strong {
+  grid-column: 2;
+  justify-self: center;
+  color: rgba(255, 255, 255, .88);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .02em;
+}
+
+.vela-settings-back {
+  grid-column: 1;
+  width: 32px;
+  height: 32px;
+  padding: 0 !important;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, .8) !important;
+  font-size: 22px !important;
+  line-height: 1;
+}
+
+.vela-settings-nav-list {
+  display: grid;
+  gap: 2px;
+}
+
+.vela-settings-nav-list-secondary {
+  padding-top: 4px;
+}
+
+.vela-settings-nav-row {
+  min-height: 48px !important;
+  width: 100%;
+  padding: 0 10px !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-radius: 12px;
+  color: rgba(255, 255, 255, .92) !important;
+  text-align: left;
+}
+
+.vela-settings-nav-row:hover,
+.vela-settings-nav-row:focus-visible {
+  background: rgba(255, 255, 255, .09) !important;
+}
+
+.vela-settings-nav-label {
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 450;
+  letter-spacing: -.01em;
+}
+
+.vela-settings-nav-trailing {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: rgba(255, 255, 255, .5);
+}
+
+.vela-settings-nav-value {
+  max-width: 122px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.vela-settings-nav-arrow {
+  color: rgba(255, 255, 255, .54);
+  font-size: 20px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.vela-settings-popover[data-vela-layered="true"] > section {
+  padding: 5px 0 4px;
+  border-bottom: 0;
+}
+
+.vela-settings-popover[data-vela-layered="true"] > section > button {
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+.vela-settings-popover[data-vela-layered="true"] .vela-speed-grid {
+  gap: 4px;
+  padding: 2px;
+}
+
+.vela-settings-popover[data-vela-layered="true"] .vela-speed-grid button {
+  min-height: 36px;
+  border-radius: 9px;
+}
+
+.vela-settings-popover[data-vela-layered="true"] .vela-setting-label {
+  padding: 10px 8px 4px;
+}
+
+.vela-settings-popover[data-vela-layered="true"] .vela-shortcuts {
+  padding: 8px 2px 6px;
+}
+
+@media (max-width: 650px) {
+  .vela-settings-popover[data-vela-layered="true"] {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: min(56vh, 420px);
+    padding: 7px;
+    border-radius: 20px;
+  }
+
+  .vela-settings-nav-row {
+    min-height: 50px !important;
+  }
+}
