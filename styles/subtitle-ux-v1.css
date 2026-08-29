@@ -1,0 +1,283 @@
+/* Phase 11 — make subtitles and caption accessibility a first-class playback surface. */
+.vela-settings-popover section[data-vela-subtitle-section="true"] {
+  gap: 5px;
+}
+
+.vela-subtitle-summary {
+  margin: 2px 4px 5px;
+  padding: 9px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .025);
+  color: rgba(255, 255, 255, .44);
+  font-size: 8px;
+  letter-spacing: .04em;
+}
+
+.vela-subtitle-summary strong {
+  color: rgba(255, 255, 255, .82);
+  font-size: 10px;
+  font-weight: 520;
+  letter-spacing: 0;
+}
+
+.vela-settings-popover section[data-vela-subtitle-section="true"] > button[data-vela-subtitle-option="true"] {
+  position: relative;
+  min-height: 52px;
+  padding: 9px 38px 9px 11px;
+  display: grid;
+  grid-template-columns: 1fr;
+  align-content: center;
+  gap: 5px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-size: 0;
+}
+
+.vela-settings-popover section[data-vela-subtitle-section="true"] > button[data-vela-subtitle-option="true"]::before {
+  content: attr(data-vela-subtitle-label);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, .82);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -.01em;
+}
+
+.vela-settings-popover section[data-vela-subtitle-section="true"] > button[data-vela-subtitle-option="true"] > small {
+  display: none;
+}
+
+.vela-subtitle-meta-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.vela-subtitle-meta {
+  min-height: 18px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .035);
+  color: rgba(255, 255, 255, .46);
+  font-size: 7px;
+  font-weight: 560;
+  letter-spacing: .055em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.vela-subtitle-meta[data-kind="forced"],
+.vela-subtitle-meta[data-kind="sdh"],
+.vela-subtitle-meta[data-kind="cc"] {
+  color: rgba(255, 255, 255, .72);
+}
+
+.vela-settings-popover section[data-vela-subtitle-section="true"] > button[data-vela-subtitle-option="true"].selected {
+  border-color: rgba(255, 255, 255, .13);
+  background: rgba(255, 255, 255, .075);
+}
+
+.vela-settings-popover section[data-vela-subtitle-section="true"] > button[data-vela-subtitle-option="true"].selected::after {
+  content: "✓";
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+  color: rgba(255, 255, 255, .9);
+  font-size: 11px;
+}
+
+.vela-settings-popover section[data-vela-subtitle-section="true"] > button[data-vela-subtitle-state="off"] {
+  min-height: 42px;
+}
+
+/* The CC control remains a one-tap toggle, while a tiny language tag shows
+   which subtitle language will be toggled without expanding the transport dock. */
+button[data-vela-caption-control="true"] {
+  position: relative;
+}
+
+button[data-vela-caption-control="true"][data-vela-caption-state="on"]::after {
+  content: attr(data-vela-caption-code);
+  position: absolute;
+  right: -2px;
+  top: -3px;
+  min-width: 16px;
+  height: 14px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 999px;
+  background: rgba(7, 8, 7, .86);
+  color: rgba(255, 255, 255, .88);
+  font-size: 6px;
+  font-weight: 650;
+  letter-spacing: .04em;
+  line-height: 1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .24);
+}
+
+/* Accessibility keeps the underlying Vela caption variables visible as a live
+   sample so style changes can be judged before returning to playback. */
+.vela-settings-popover section[data-vela-accessibility-section="true"] {
+  gap: 4px;
+}
+
+.vela-caption-preview-card {
+  margin: 2px 4px 6px;
+  min-height: 86px;
+  padding: 11px 12px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: 13px;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, .07), transparent 44%),
+    rgba(0, 0, 0, .28);
+}
+
+.vela-caption-preview-card small {
+  color: rgba(255, 255, 255, .4);
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.vela-caption-preview-line {
+  max-width: 94%;
+  padding: 3px 6px;
+  color: var(--vela-caption-color);
+  background: var(--vela-caption-bg);
+  font-family: var(--vela-caption-font);
+  font-size: calc(12px * var(--vela-caption-scale));
+  line-height: 1.42;
+  text-align: center;
+  text-shadow: var(--vela-caption-edge);
+}
+
+.vela-caption-presets {
+  margin: 0 4px 5px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.vela-caption-presets button {
+  min-height: 36px !important;
+  padding: 5px 4px !important;
+  border: 1px solid rgba(255, 255, 255, .09) !important;
+  border-radius: 9px !important;
+  background: rgba(255, 255, 255, .025) !important;
+  color: rgba(255, 255, 255, .6) !important;
+  font-size: 8px !important;
+  text-align: center !important;
+}
+
+.vela-caption-presets button:hover,
+.vela-caption-presets button:focus-visible {
+  background: rgba(255, 255, 255, .08) !important;
+  color: rgba(255, 255, 255, .9) !important;
+}
+
+.vela-caption-presets button.is-active {
+  border-color: rgba(255, 255, 255, .15) !important;
+  background: rgba(255, 255, 255, .09) !important;
+  color: #fff !important;
+}
+
+.vela-subtitle-confirmation {
+  position: absolute;
+  z-index: 9;
+  left: 50%;
+  top: 50%;
+  min-width: 150px;
+  max-width: min(76%, 280px);
+  padding: 12px 16px;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 16px;
+  background: rgba(7, 8, 7, .76);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .3), inset 0 1px 0 rgba(255, 255, 255, .07);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  opacity: 0;
+  transform: translate(-50%, -46%) scale(.97);
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.vela-subtitle-confirmation.is-visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.vela-subtitle-confirmation small {
+  color: rgba(255, 255, 255, .46);
+  font-size: 7px;
+  font-weight: 650;
+  letter-spacing: .14em;
+}
+
+.vela-subtitle-confirmation strong {
+  max-width: 220px;
+  overflow: hidden;
+  color: rgba(255, 255, 255, .94);
+  font-size: 12px;
+  font-weight: 560;
+  letter-spacing: -.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vela-subtitle-confirmation span {
+  color: rgba(255, 255, 255, .48);
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.vela-display-frame[data-vela-display="minimal"] .vela-subtitle-confirmation {
+  display: none;
+}
+
+@media (max-width: 650px) {
+  button[data-vela-caption-control="true"][data-vela-caption-state="on"]::after {
+    display: none;
+  }
+
+  .vela-caption-preview-card {
+    min-height: 78px;
+  }
+
+  .vela-caption-presets button {
+    min-height: 40px !important;
+  }
+
+  .vela-subtitle-confirmation {
+    min-width: 138px;
+    padding: 11px 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vela-subtitle-confirmation { transition: none; }
+}
