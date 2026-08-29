@@ -1,0 +1,203 @@
+/* Phase 09 — multilingual audio as a first-class playback surface. */
+.vela-settings-popover section[data-vela-audio-section="true"] {
+  gap: 5px;
+}
+
+.vela-audio-summary {
+  margin: 2px 4px 5px;
+  padding: 9px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .025);
+  color: rgba(255, 255, 255, .45);
+  font-size: 8px;
+  letter-spacing: .04em;
+}
+
+.vela-audio-summary strong {
+  color: rgba(255, 255, 255, .82);
+  font-size: 10px;
+  font-weight: 520;
+  letter-spacing: 0;
+}
+
+.vela-settings-popover section[data-vela-audio-section="true"] > button[data-vela-audio-option="true"] {
+  position: relative;
+  min-height: 54px;
+  padding: 9px 38px 9px 11px;
+  display: grid;
+  grid-template-columns: 1fr;
+  align-content: center;
+  gap: 5px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-size: 0;
+}
+
+.vela-settings-popover section[data-vela-audio-section="true"] > button[data-vela-audio-option="true"]::before {
+  content: attr(data-vela-audio-label);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, .82);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -.01em;
+}
+
+.vela-settings-popover section[data-vela-audio-section="true"] > button[data-vela-audio-option="true"] > small {
+  display: none;
+}
+
+.vela-audio-meta-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.vela-audio-meta {
+  min-height: 18px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .035);
+  color: rgba(255, 255, 255, .46);
+  font-size: 7px;
+  font-weight: 560;
+  letter-spacing: .055em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.vela-audio-meta[data-kind="spatial"],
+.vela-audio-meta[data-kind="commentary"] {
+  color: rgba(255, 255, 255, .7);
+}
+
+.vela-settings-popover section[data-vela-audio-section="true"] > button[data-vela-audio-option="true"]:hover,
+.vela-settings-popover section[data-vela-audio-section="true"] > button[data-vela-audio-option="true"]:focus-visible {
+  border-color: rgba(255, 255, 255, .1);
+  background: rgba(255, 255, 255, .055);
+}
+
+.vela-settings-popover section[data-vela-audio-section="true"] > button[data-vela-audio-option="true"].selected {
+  border-color: rgba(255, 255, 255, .18);
+  background: rgba(255, 255, 255, .085);
+}
+
+.vela-settings-popover section[data-vela-audio-section="true"] > button[data-vela-audio-option="true"].selected::before {
+  color: #fff;
+}
+
+.vela-settings-popover section[data-vela-audio-section="true"] > button[data-vela-audio-option="true"].selected::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  float: none;
+  margin: 0;
+  transform: translateY(-50%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.vela-audio-confirmation {
+  position: absolute;
+  z-index: 12;
+  left: 50%;
+  top: 50%;
+  min-width: 170px;
+  max-width: min(78%, 310px);
+  padding: 11px 14px 12px;
+  display: grid;
+  gap: 4px;
+  transform: translate(-50%, -50%) scale(.96);
+  opacity: 0;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 16px;
+  background: rgba(6, 7, 6, .68);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .34), inset 0 1px 0 rgba(255,255,255,.075);
+  backdrop-filter: blur(20px) saturate(1.18);
+  -webkit-backdrop-filter: blur(20px) saturate(1.18);
+  transition: opacity .15s ease, transform .15s ease;
+  text-align: center;
+}
+
+.vela-audio-confirmation.is-visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.vela-audio-confirmation small {
+  color: rgba(255, 255, 255, .42);
+  font-size: 7px;
+  font-weight: 650;
+  letter-spacing: .16em;
+}
+
+.vela-audio-confirmation strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 520;
+  letter-spacing: -.01em;
+}
+
+.vela-audio-confirmation span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, .58);
+  font-size: 9px;
+}
+
+.vela-signal-chip[data-kind="audio"][data-vela-audio-quick="true"] {
+  pointer-events: auto;
+  cursor: pointer;
+  transition: color .14s ease, background .14s ease, border-color .14s ease;
+}
+
+.vela-signal-chip[data-kind="audio"][data-vela-audio-quick="true"]:hover,
+.vela-signal-chip[data-kind="audio"][data-vela-audio-quick="true"]:focus-visible {
+  border-color: rgba(255,255,255,.22);
+  background: rgba(255,255,255,.075);
+  color: #fff;
+  outline: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .vela-settings-popover section[data-vela-audio-section="true"] > button[data-vela-audio-option="true"] {
+    min-height: 60px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .vela-audio-summary {
+    min-height: 38px;
+  }
+
+  .vela-audio-confirmation {
+    max-width: calc(100% - 40px);
+    padding: 12px 16px 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vela-audio-confirmation,
+  .vela-signal-chip[data-kind="audio"][data-vela-audio-quick="true"] {
+    transition: none;
+  }
+}
