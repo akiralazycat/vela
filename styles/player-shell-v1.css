@@ -19,6 +19,169 @@
   opacity: .08;
 }
 
+/* Phase 02 — collapse the former stacked timeline + control row into one dock.
+   The timeline stays a sibling in the DOM for now, but is positioned through the
+   middle of the glass bar so playback logic and accessibility remain untouched. */
+.vela-controls {
+  left: clamp(12px, 2vw, 20px);
+  right: clamp(12px, 2vw, 20px);
+  bottom: clamp(12px, 2vw, 20px);
+  min-height: 60px;
+}
+
+.vela-control-row {
+  min-height: 60px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: 999px;
+  background: color-mix(
+    in srgb,
+    var(--vela-surface) calc(var(--vela-controls-opacity) * 100%),
+    rgba(255, 255, 255, .13)
+  );
+  box-shadow:
+    0 12px 34px rgba(0, 0, 0, .24),
+    inset 0 1px 0 rgba(255, 255, 255, .08);
+  backdrop-filter: blur(calc(var(--vela-blur) + 4px)) saturate(1.28);
+  -webkit-backdrop-filter: blur(calc(var(--vela-blur) + 4px)) saturate(1.28);
+}
+
+.vela-control-group {
+  position: relative;
+  z-index: 3;
+}
+
+.vela-control-group.right {
+  padding-left: 8px;
+}
+
+.vela-current-chapter {
+  display: none;
+}
+
+.vela-icon-button,
+.vela-settings-button {
+  height: 40px;
+  min-width: 40px;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, .9);
+}
+
+.vela-icon-button.primary {
+  color: #fff;
+}
+
+.vela-icon-button:hover,
+.vela-icon-button.is-active,
+.vela-settings-button:hover,
+.vela-settings-button.is-active {
+  background: rgba(255, 255, 255, .11);
+}
+
+.vela-timecode {
+  padding-left: 7px;
+  padding-right: 8px;
+  color: rgba(255, 255, 255, .88);
+  font-size: 11px;
+}
+
+.vela-timecode i {
+  color: rgba(255, 255, 255, .36);
+}
+
+.vela-live-button {
+  min-height: 38px;
+  border-radius: 999px;
+}
+
+.vela-settings-button {
+  min-width: 58px;
+  padding-inline: 10px;
+}
+
+.vela-timeline-wrap {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 150px;
+  right: 204px;
+  bottom: auto;
+  height: 34px;
+  transform: translateY(-50%);
+  align-items: center;
+}
+
+.vela-timeline {
+  top: 50%;
+  bottom: auto;
+  height: 4px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .28);
+}
+
+.vela-buffered {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .32);
+}
+
+.vela-progress {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .94);
+}
+
+.vela-seek-input {
+  top: 50%;
+  bottom: auto;
+  height: 28px;
+  transform: translateY(-50%);
+  opacity: 1;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+}
+
+.vela-seek-input::-webkit-slider-runnable-track {
+  height: 4px;
+  background: transparent;
+}
+
+.vela-seek-input::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .32);
+  -webkit-appearance: none;
+}
+
+.vela-seek-input::-moz-range-track {
+  height: 4px;
+  border: 0;
+  background: transparent;
+}
+
+.vela-seek-input::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .32);
+}
+
+.vela-preview {
+  bottom: calc(100% + 12px);
+  border-radius: 16px;
+}
+
+.vela-popover {
+  bottom: 50px;
+  border-radius: 18px;
+}
+
 @media (max-width: 650px) {
   .vela-player {
     aspect-ratio: 16 / 9;
@@ -26,5 +189,67 @@
 
   .vela-player[style*="--vela-radius: 0px"] {
     border-radius: 20px;
+  }
+
+  .vela-controls {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    min-height: 52px;
+  }
+
+  .vela-control-row {
+    min-height: 52px;
+    padding: 5px 6px;
+  }
+
+  .vela-icon-button,
+  .vela-settings-button {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+  }
+
+  .vela-settings-button {
+    padding: 0;
+  }
+
+  .vela-timecode {
+    padding-left: 3px;
+    padding-right: 4px;
+    font-size: 10px;
+  }
+
+  .vela-timeline-wrap {
+    left: 96px;
+    right: 132px;
+    height: 30px;
+  }
+
+  .vela-seek-input::-webkit-slider-thumb {
+    width: 12px;
+    height: 12px;
+    margin-top: -4px;
+  }
+
+  .vela-seek-input::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+  }
+
+  .vela-preview {
+    bottom: calc(100% + 10px);
+    border-radius: 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .vela-control-group.right {
+    padding-left: 4px;
+  }
+
+  .vela-timeline-wrap {
+    left: 88px;
+    right: 126px;
   }
 }
