@@ -2,6 +2,16 @@
 
 import { memo, type CSSProperties, useEffect, useRef, useState } from "react";
 import { AudioSettings, describeAudioOption, type AudioSettingsOption } from "./AudioSettings";
+import {
+  AccessibilitySettings,
+  accessibilitySummary,
+  type AccessibilityCaptionStyle,
+} from "./AccessibilitySettings";
+import {
+  SubtitleSettings,
+  describeSubtitleOption,
+  type SubtitleSettingsOption,
+} from "./SubtitleSettings";
 
 type SettingsView =
   | "root"
@@ -19,23 +29,11 @@ type SettingsQualityOption = {
   bandwidth: number;
 };
 
-type SettingsTextOption = {
-  id: string;
-  label: string;
-  language: string;
-};
-
 type SettingsChapter = {
   id?: string;
   title: string;
   start: number;
   end?: number;
-};
-
-type SettingsCaptionStyle = {
-  fontScale: number;
-  backgroundOpacity: number;
-  edge: "none" | "shadow" | "outline";
 };
 
 type SettingsMenuProps = {
@@ -46,24 +44,21 @@ type SettingsMenuProps = {
   speed: number;
   audioOptions: ReadonlyArray<AudioSettingsOption>;
   selectedAudio: string | null;
-  textOptions: ReadonlyArray<SettingsTextOption>;
+  textOptions: ReadonlyArray<SubtitleSettingsOption>;
   selectedText: "off" | string;
-  captionStyle: SettingsCaptionStyle;
+  captionStyle: AccessibilityCaptionStyle;
   chapters: ReadonlyArray<SettingsChapter>;
   currentChapterStart?: number | null;
   onSelectAudio: (id: string) => void;
   onSelectQuality: (quality: "auto" | number) => void;
   onSpeedChange: (value: number) => void;
   onSelectText: (id: "off" | string) => void;
-  onCaptionStyleChange: (patch: Partial<SettingsCaptionStyle>) => void;
+  onCaptionStyleChange: (patch: Partial<AccessibilityCaptionStyle>) => void;
   onSeekChapter: (time: number) => void;
   onToggleLoop: () => void;
 };
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
-const CAPTION_SIZES = [0.8, 1, 1.2, 1.4] as const;
-const CAPTION_EDGES = ["none", "shadow", "outline"] as const;
-const CAPTION_BACKGROUNDS = [0, 0.5, 0.82] as const;
 
 function formatTime(value: number) {
   if (!Number.isFinite(value)) return "0:00";
@@ -157,12 +152,13 @@ function SettingsMenuImpl({
   const selectedAudioOption = audioOptions.find((option) => option.id === selectedAudio);
   const selectedAudioPresentation = describeAudioOption(selectedAudioOption);
   const selectedTextOption = textOptions.find((option) => option.id === selectedText);
+  const selectedTextPresentation = describeSubtitleOption(selectedTextOption);
   const selectedChapter = chapters.find((chapter) => chapter.start === currentChapterStart);
   const qualityValue = selectedQuality === "auto"
     ? decodedHeight ? `Auto · ${decodedHeight}p` : "Auto"
     : `${selectedQuality}p`;
-  const subtitleValue = selectedText === "off" ? "Off" : selectedTextOption?.label || "On";
-  const accessibilityValue = `${Math.round(captionStyle.fontScale * 100)}% · ${titleCase(captionStyle.edge)}`;
+  const subtitleValue = selectedText === "off" ? "Off" : selectedTextPresentation?.label || "On";
+  const accessibilityValue = accessibilitySummary(captionStyle);
 
   const sectionStyle = (section: SettingsView): CSSProperties => ({
     display: view === section ? "grid" : "none",
@@ -244,39 +240,20 @@ function SettingsMenuImpl({
       ) : null}
 
       {textOptions.length ? (
-        <section style={sectionStyle("subtitles")}>
-          <span>SUBTITLES</span>
-          <button type="button" className={selectedText === "off" ? "selected" : ""} onClick={() => onSelectText("off")}>Off</button>
-          {textOptions.map((option) => (
-            <button key={option.id} type="button" className={selectedText === option.id ? "selected" : ""} onClick={() => onSelectText(option.id)}>
-              {option.label}<small>{option.language.toUpperCase()}</small>
-            </button>
-          ))}
-        </section>
+        <SubtitleSettings
+          options={textOptions}
+          selectedText={selectedText}
+          style={sectionStyle("subtitles")}
+          onSelect={onSelectText}
+        />
       ) : null}
 
       {textOptions.length ? (
-        <section style={sectionStyle("accessibility")}>
-          <span>SUBTITLE STYLE</span>
-          <div className="vela-setting-label">SIZE</div>
-          <div className="vela-speed-grid">
-            {CAPTION_SIZES.map((value) => (
-              <button key={value} type="button" className={captionStyle.fontScale === value ? "selected" : ""} onClick={() => onCaptionStyleChange({ fontScale: value })}>{Math.round(value * 100)}%</button>
-            ))}
-          </div>
-          <div className="vela-setting-label">EDGE</div>
-          <div className="vela-speed-grid">
-            {CAPTION_EDGES.map((value) => (
-              <button key={value} type="button" className={captionStyle.edge === value ? "selected" : ""} onClick={() => onCaptionStyleChange({ edge: value })}>{value}</button>
-            ))}
-          </div>
-          <div className="vela-setting-label">BACKGROUND</div>
-          <div className="vela-speed-grid">
-            {CAPTION_BACKGROUNDS.map((value) => (
-              <button key={value} type="button" className={captionStyle.backgroundOpacity === value ? "selected" : ""} onClick={() => onCaptionStyleChange({ backgroundOpacity: value })}>{Math.round(value * 100)}%</button>
-            ))}
-          </div>
-        </section>
+        <AccessibilitySettings
+          captionStyle={captionStyle}
+          style={sectionStyle("accessibility")}
+          onChange={onCaptionStyleChange}
+        />
       ) : null}
 
       {chapters.length ? (

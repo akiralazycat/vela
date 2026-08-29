@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ActionDock } from "./ActionDock";
 
 type ControlDockProps = {
@@ -31,6 +32,8 @@ type ControlDockProps = {
 };
 
 type DockIconName = "play" | "pause" | "volume" | "muted" | "captions" | "loop" | "settings";
+type CaptionDescriptor = { code: string; label: string };
+type CaptionConfirmation = CaptionDescriptor & { active: boolean };
 
 function formatTime(value: number) {
   if (!Number.isFinite(value)) return "0:00";
@@ -41,6 +44,33 @@ function formatTime(value: number) {
   return hours > 0
     ? `${hours}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
     : `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+function captionDescriptor(button: HTMLButtonElement | null, active: boolean): CaptionDescriptor {
+  if (!button || !active) return { code: "CC", label: "Subtitles" };
+  const video = button.closest(".vela-player")?.querySelector("video");
+  if (!(video instanceof HTMLVideoElement)) return { code: "CC", label: "Subtitles" };
+
+  let fallback: TextTrack | null = null;
+  for (let index = 0; index < video.textTracks.length; index += 1) {
+    const track = video.textTracks[index];
+    fallback ??= track;
+    if (track.mode !== "showing") continue;
+    const language = track.language || "";
+    return {
+      code: language ? language.split("-")[0].toUpperCase() : "CC",
+      label: track.label || language || "Subtitles",
+    };
+  }
+
+  if (fallback) {
+    const language = fallback.language || "";
+    return {
+      code: language ? language.split("-")[0].toUpperCase() : "CC",
+      label: fallback.label || language || "Subtitles",
+    };
+  }
+  return { code: "CC", label: "Subtitles" };
 }
 
 function DockIcon({ name }: { name: DockIconName }) {
@@ -91,72 +121,137 @@ export function ControlDock({
   onPictureInPicture,
   onFullscreen,
 }: ControlDockProps) {
+  const captionButtonRef = useRef<HTMLButtonElement>(null);
+  const previousCaptionsActiveRef = useRef(captionsActive);
+  const hideConfirmationRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const [captionInfo, setCaptionInfo] = useState<CaptionDescriptor>({ code: "CC", label: "Subtitles" });
+  const [captionConfirmation, setCaptionConfirmation] = useState<CaptionConfirmation | null>(null);
+
+  useEffect(() => {
+    const button = captionButtonRef.current;
+    if (!button) return;
+    setPortalTarget(button.closest(".vela-player") as HTMLElement | null);
+    const video = button.closest(".vela-player")?.querySelector("video");
+    if (!(video instanceof HTMLVideoElement)) return;
+
+    const sync = () => setCaptionInfo(captionDescriptor(button, captionsActive));
+    sync();
+    video.textTracks.addEventListener("change", sync);
+    video.textTracks.addEventListener("addtrack", sync);
+    video.textTracks.addEventListener("removetrack", sync);
+    return () => {
+      video.textTracks.removeEventListener("change", sync);
+      video.textTracks.removeEventListener("addtrack", sync);
+      video.textTracks.removeEventListener("removetrack", sync);
+    };
+  }, [captionsActive, hasTextTracks]);
+
+  useEffect(() => {
+    const previous = previousCaptionsActiveRef.current;
+    previousCaptionsActiveRef.current = captionsActive;
+    if (previous === captionsActive) return;
+
+    const timer = setTimeout(() => {
+      const info = captionDescriptor(captionButtonRef.current, captionsActive);
+      setCaptionInfo(info);
+      setCaptionConfirmation({ ...info, active: captionsActive });
+      if (hideConfirmationRef.current) clearTimeout(hideConfirmationRef.current);
+      hideConfirmationRef.current = setTimeout(() => setCaptionConfirmation(null), 1650);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [captionsActive]);
+
+  useEffect(() => () => {
+    if (hideConfirmationRef.current) clearTimeout(hideConfirmationRef.current);
+  }, []);
+
   return (
-    <div className="vela-control-row" data-vela-control-dock-owner="react">
-      <div className="vela-control-group">
-        <button className="vela-icon-button primary" type="button" onClick={() => void onTogglePlay()} aria-label={playing ? "Pause" : "Play"}>
-          <DockIcon name={playing ? "pause" : "play"} />
-        </button>
-
-        <div className="vela-volume-cluster">
-          <button className="vela-icon-button" type="button" onClick={onToggleMute} aria-label={muted ? "Unmute" : "Mute"}>
-            <DockIcon name={muted || volume === 0 ? "muted" : "volume"} />
+    <>
+      <div className="vela-control-row" data-vela-control-dock-owner="react">
+        <div className="vela-control-group">
+          <button className="vela-icon-button primary" type="button" onClick={() => void onTogglePlay()} aria-label={playing ? "Pause" : "Play"}>
+            <DockIcon name={playing ? "pause" : "play"} />
           </button>
-          <input
-            className="vela-volume-input"
-            type="range"
-            min={0}
-            max={1}
-            step="0.01"
-            value={muted ? 0 : volume}
-            onChange={(event) => onVolumeChange(Number(event.target.value))}
-            aria-label="Volume"
-          />
-        </div>
 
-        {isLive ? (
-          <button className={`vela-live-button ${atLiveEdge ? "is-live-edge" : ""}`} type="button" onClick={onGoLive}>
-            <span />
-            {atLiveEdge ? "LIVE" : `GO LIVE · -${formatTime(Math.max(timelineEnd - currentTime, 0))}`}
-          </button>
-        ) : (
-          <div className="vela-timecode" aria-label={`${formatTime(currentTime)} of ${formatTime(duration)}`}>
-            <span>{formatTime(currentTime)}</span><i>/</i><span>{formatTime(duration)}</span>
+          <div className="vela-volume-cluster">
+            <button className="vela-icon-button" type="button" onClick={onToggleMute} aria-label={muted ? "Unmute" : "Mute"}>
+              <DockIcon name={muted || volume === 0 ? "muted" : "volume"} />
+            </button>
+            <input
+              className="vela-volume-input"
+              type="range"
+              min={0}
+              max={1}
+              step="0.01"
+              value={muted ? 0 : volume}
+              onChange={(event) => onVolumeChange(Number(event.target.value))}
+              aria-label="Volume"
+            />
           </div>
-        )}
 
-        {currentChapterTitle ? <span className="vela-current-chapter">{currentChapterTitle}</span> : null}
-      </div>
+          {isLive ? (
+            <button className={`vela-live-button ${atLiveEdge ? "is-live-edge" : ""}`} type="button" onClick={onGoLive}>
+              <span />
+              {atLiveEdge ? "LIVE" : `GO LIVE · -${formatTime(Math.max(timelineEnd - currentTime, 0))}`}
+            </button>
+          ) : (
+            <div className="vela-timecode" aria-label={`${formatTime(currentTime)} of ${formatTime(duration)}`}>
+              <span>{formatTime(currentTime)}</span><i>/</i><span>{formatTime(duration)}</span>
+            </div>
+          )}
 
-      <div className="vela-control-group right">
-        {hasTextTracks ? (
-          <button className={`vela-icon-button ${captionsActive ? "is-active" : ""}`} type="button" onClick={onToggleCaptions} aria-label="Toggle captions">
-            <DockIcon name="captions" />
-          </button>
-        ) : null}
-
-        {!isLive ? (
-          <button className={`vela-icon-button ${loop ? "is-active" : ""}`} type="button" onClick={onToggleLoop} aria-label="Toggle loop">
-            <DockIcon name="loop" />
-          </button>
-        ) : null}
-
-        <div className="vela-settings-menu">
-          <button
-            className={`vela-settings-button ${settingsOpen ? "is-active" : ""}`}
-            type="button"
-            onClick={onToggleSettings}
-            aria-expanded={settingsOpen}
-            aria-label="Playback settings"
-          >
-            <span>{selectedQuality === "auto" ? "AUTO" : `${selectedQuality}P`}</span>
-            <DockIcon name="settings" />
-          </button>
-          {settingsPanel}
+          {currentChapterTitle ? <span className="vela-current-chapter">{currentChapterTitle}</span> : null}
         </div>
 
-        <ActionDock onPictureInPicture={onPictureInPicture} onFullscreen={onFullscreen} />
+        <div className="vela-control-group right">
+          {hasTextTracks ? (
+            <button
+              ref={captionButtonRef}
+              className={`vela-icon-button ${captionsActive ? "is-active" : ""}`}
+              type="button"
+              onClick={onToggleCaptions}
+              aria-label={captionsActive ? `${captionInfo.label} on. Toggle subtitles off.` : "Subtitles off. Toggle subtitles on."}
+              data-vela-caption-control="true"
+              data-vela-caption-state={captionsActive ? "on" : "off"}
+              data-vela-caption-code={captionsActive ? captionInfo.code : undefined}
+            >
+              <DockIcon name="captions" />
+            </button>
+          ) : null}
+
+          {!isLive ? (
+            <button className={`vela-icon-button ${loop ? "is-active" : ""}`} type="button" onClick={onToggleLoop} aria-label="Toggle loop">
+              <DockIcon name="loop" />
+            </button>
+          ) : null}
+
+          <div className="vela-settings-menu">
+            <button
+              className={`vela-settings-button ${settingsOpen ? "is-active" : ""}`}
+              type="button"
+              onClick={onToggleSettings}
+              aria-expanded={settingsOpen}
+              aria-label="Playback settings"
+            >
+              <span>{selectedQuality === "auto" ? "AUTO" : `${selectedQuality}P`}</span>
+              <DockIcon name="settings" />
+            </button>
+            {settingsPanel}
+          </div>
+
+          <ActionDock onPictureInPicture={onPictureInPicture} onFullscreen={onFullscreen} />
+        </div>
       </div>
-    </div>
+
+      {portalTarget && captionConfirmation ? createPortal(
+        <div className="vela-subtitle-confirmation is-visible" role="status" aria-live="polite">
+          <small>SUBTITLES</small>
+          <strong>{captionConfirmation.active ? captionConfirmation.label : "Off"}</strong>
+          <span>{captionConfirmation.active ? `${captionConfirmation.code} · Subtitles` : "Captions hidden"}</span>
+        </div>,
+        portalTarget,
+      ) : null}
+    </>
   );
 }
