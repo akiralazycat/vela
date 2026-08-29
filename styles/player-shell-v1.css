@@ -1,0 +1,30 @@
+.vela-player {
+  border-color: rgba(255, 255, 255, .16);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .18);
+}
+
+/* Prototype 03 used 0 as the implicit default radius. Treat that legacy value
+   as the new rounded shell while preserving any explicit non-zero theme radius. */
+.vela-player[style*="--vela-radius: 0px"] {
+  border-radius: 24px;
+}
+
+.vela-vignette {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, .08), transparent 34%, transparent 60%, rgba(0, 0, 0, .46)),
+    linear-gradient(90deg, rgba(0, 0, 0, .12), transparent 40%);
+}
+
+.vela-player.has-started:not(.is-controls-visible) .vela-vignette {
+  opacity: .08;
+}
+
+@media (max-width: 650px) {
+  .vela-player {
+    aspect-ratio: 16 / 9;
+  }
+
+  .vela-player[style*="--vela-radius: 0px"] {
+    border-radius: 20px;
+  }
+}
