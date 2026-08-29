@@ -178,15 +178,22 @@
   }
 
   function chip(kind, text) {
-    const node = document.createElement(kind === "audio" ? "button" : "span");
+    const audioQuick = kind === "audio";
+    const liveReturn = kind === "live" && text.startsWith("DVR");
+    const node = document.createElement(audioQuick || liveReturn ? "button" : "span");
     node.className = "vela-signal-chip";
     node.dataset.kind = kind;
     node.textContent = text;
 
     if (node instanceof HTMLButtonElement) {
       node.type = "button";
-      node.dataset.velaAudioQuick = "true";
-      node.setAttribute("aria-label", `Audio: ${text}. Open audio settings.`);
+      if (audioQuick) {
+        node.dataset.velaAudioQuick = "true";
+        node.setAttribute("aria-label", `Audio: ${text}. Open audio settings.`);
+      } else if (liveReturn) {
+        node.dataset.velaLiveAction = "return";
+        node.setAttribute("aria-label", `${text}. Return to live edge.`);
+      }
     }
 
     return node;
@@ -255,6 +262,13 @@
         const audioChip = event.target.closest('.vela-signal-chip[data-kind="audio"][data-vela-audio-quick="true"]');
         if (audioChip) {
           openAudioSettings(player);
+          return;
+        }
+
+        const liveChip = event.target.closest('.vela-signal-chip[data-kind="live"][data-vela-live-action="return"]');
+        if (liveChip) {
+          const liveButton = player.querySelector(".vela-live-button");
+          if (liveButton instanceof HTMLButtonElement) liveButton.click();
           return;
         }
       }

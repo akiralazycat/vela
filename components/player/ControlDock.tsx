@@ -3,6 +3,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ActionDock } from "./ActionDock";
+import { LiveStatus } from "./LiveStatus";
 
 type ControlDockProps = {
   playing: boolean;
@@ -191,10 +192,12 @@ export function ControlDock({
           </div>
 
           {isLive ? (
-            <button className={`vela-live-button ${atLiveEdge ? "is-live-edge" : ""}`} type="button" onClick={onGoLive}>
-              <span />
-              {atLiveEdge ? "LIVE" : `GO LIVE · -${formatTime(Math.max(timelineEnd - currentTime, 0))}`}
-            </button>
+            <LiveStatus
+              atLiveEdge={atLiveEdge}
+              currentTime={currentTime}
+              timelineEnd={timelineEnd}
+              onGoLive={onGoLive}
+            />
           ) : (
             <div className="vela-timecode" aria-label={`${formatTime(currentTime)} of ${formatTime(duration)}`}>
               <span>{formatTime(currentTime)}</span><i>/</i><span>{formatTime(duration)}</span>

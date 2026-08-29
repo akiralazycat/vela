@@ -147,6 +147,8 @@ export function TimelinePreview({
       className={`vela-preview ${Math.abs(edgeShift) > 0.5 ? "is-edge-adjusted" : ""}`}
       style={style}
       data-vela-live-preview-state={isLive ? (atLiveEdge ? "edge" : "dvr") : undefined}
+      data-vela-live-preview-kicker={isLive ? (atLiveEdge ? "EDGE" : "DVR") : undefined}
+      data-vela-live-preview-label={isLive ? (atLiveEdge ? "LIVE" : `−${formatTime(delay)}`) : undefined}
       data-vela-preview-owner="react"
     >
       {isLive ? (
