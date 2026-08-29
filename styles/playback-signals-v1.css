@@ -1,0 +1,127 @@
+/* Phase 08 — reintroduce Vela's playback intelligence as quiet, contextual signals. */
+.vela-signal-rail {
+  position: absolute;
+  z-index: 5;
+  left: clamp(12px, 2vw, 20px);
+  bottom: clamp(84px, 9vw, 94px);
+  max-width: calc(100% - clamp(24px, 4vw, 40px));
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity .16s ease, transform .16s ease;
+}
+
+.vela-player[data-vela-signals="ready"].has-started.is-controls-visible .vela-signal-rail {
+  opacity: 1;
+  transform: none;
+}
+
+.vela-signal-chip {
+  min-width: 0;
+  height: 24px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, .13);
+  border-radius: 999px;
+  background: rgba(7, 8, 7, .58);
+  color: rgba(255, 255, 255, .74);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .055);
+  backdrop-filter: blur(14px) saturate(1.16);
+  -webkit-backdrop-filter: blur(14px) saturate(1.16);
+  font-size: 8px;
+  font-weight: 560;
+  letter-spacing: .055em;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.vela-signal-chip[data-kind="quality"] {
+  color: rgba(255, 255, 255, .9);
+}
+
+.vela-signal-chip[data-kind="live"]::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  flex: 0 0 5px;
+  border-radius: 50%;
+  background: #ff5d5d;
+  box-shadow: 0 0 0 3px rgba(255, 93, 93, .11);
+}
+
+.vela-signal-chip[data-kind="chapter"] {
+  max-width: min(32vw, 220px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vela-signal-chip[data-kind="media"] {
+  color: rgba(255, 255, 255, .58);
+}
+
+/* The old engine and codec badges remain in the DOM as a data source and
+   fallback, but the contextual rail becomes the visible representation. */
+.vela-player[data-vela-signals="ready"] .vela-engine-badge,
+.vela-player[data-vela-signals="ready"] .vela-media-badges {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Settings retain the familiar root hierarchy, but Quality now reports the
+   actually decoded height while ABR is active. */
+.vela-settings-nav-row[data-vela-signal-row="quality"] .vela-settings-nav-value {
+  color: rgba(255, 255, 255, .7);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Do not stack contextual signals under a larger floating surface. */
+.vela-player:has(.vela-preview) .vela-signal-rail,
+.vela-player:has(.vela-settings-popover) .vela-signal-rail {
+  opacity: 0 !important;
+}
+
+/* Minimal means minimal: playback intelligence remains available through the
+   actual stream and timeline, but no status rail is painted over the video. */
+.vela-display-frame[data-vela-display="minimal"] .vela-signal-rail {
+  display: none;
+}
+
+@media (max-width: 650px) {
+  .vela-signal-rail {
+    left: 10px;
+    bottom: 72px;
+    max-width: calc(100% - 20px);
+    gap: 4px;
+  }
+
+  .vela-signal-chip {
+    height: 22px;
+    padding-inline: 7px;
+    font-size: 7.5px;
+  }
+
+  .vela-signal-chip[data-kind="audio"],
+  .vela-signal-chip[data-kind="media"] {
+    display: none;
+  }
+
+  .vela-signal-chip[data-kind="chapter"] {
+    max-width: 42vw;
+  }
+}
+
+@media (max-width: 390px) {
+  .vela-signal-chip[data-kind="chapter"] {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vela-signal-rail { transition: none; }
+}

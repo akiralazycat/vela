@@ -3,18 +3,21 @@
 
   const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
-  function markerRatios(wrap) {
+  function markerEntries(wrap) {
     return Array.from(wrap.querySelectorAll(".vela-chapter-marker"))
-      .map((marker) => Number.parseFloat(marker.style.left || "0") / 100)
-      .filter(Number.isFinite)
-      .sort((a, b) => a - b);
+      .map((marker) => ({
+        ratio: Number.parseFloat(marker.style.left || "0") / 100,
+        title: marker.dataset.velaChapterTitle || "",
+      }))
+      .filter((entry) => Number.isFinite(entry.ratio))
+      .sort((a, b) => a.ratio - b.ratio);
   }
 
-  function intervalAt(ratio, markers) {
-    if (!markers.length) return 0;
+  function intervalAt(ratio, entries) {
+    if (!entries.length) return 0;
     let index = 0;
-    markers.forEach((marker, markerIndex) => {
-      if (ratio >= marker) index = markerIndex;
+    entries.forEach((entry, entryIndex) => {
+      if (ratio >= entry.ratio) index = entryIndex;
     });
     return index;
   }
@@ -42,28 +45,30 @@
     wrap.style.setProperty("--vela-preview-anchor", `${idealCenter}px`);
     wrap.style.setProperty("--vela-preview-anchor-opacity", "1");
 
-    const currentChapter = wrap.closest(".vela-player")?.querySelector(".vela-current-chapter")?.textContent?.trim();
+    const player = wrap.closest(".vela-player");
+    const currentChapter = player?.querySelector(".vela-current-chapter")?.textContent?.trim();
     let chapterNode = preview.querySelector(".vela-preview-chapter");
     const seek = wrap.querySelector(".vela-seek-input");
-    const markers = markerRatios(wrap);
-    let canShowChapter = Boolean(currentChapter);
+    const entries = markerEntries(wrap);
+    const hoverIndex = intervalAt(ratio, entries);
+    let chapterTitle = entries[hoverIndex]?.title || "";
 
-    if (currentChapter && seek instanceof HTMLInputElement && markers.length) {
+    if (!chapterTitle && currentChapter && seek instanceof HTMLInputElement && entries.length) {
       const min = Number.parseFloat(seek.min || "0");
       const max = Number.parseFloat(seek.max || "0");
       const value = Number.parseFloat(seek.value || "0");
       const span = max - min;
       const currentRatio = span > 0 ? clamp((value - min) / span, 0, 1) : 0;
-      canShowChapter = intervalAt(currentRatio, markers) === intervalAt(ratio, markers);
+      if (intervalAt(currentRatio, entries) === hoverIndex) chapterTitle = currentChapter;
     }
 
-    if (canShowChapter && currentChapter) {
+    if (chapterTitle) {
       if (!(chapterNode instanceof HTMLElement)) {
         chapterNode = document.createElement("span");
         chapterNode.className = "vela-preview-chapter";
         preview.append(chapterNode);
       }
-      chapterNode.textContent = currentChapter;
+      chapterNode.textContent = chapterTitle;
     } else if (chapterNode) {
       chapterNode.remove();
     }
@@ -101,7 +106,12 @@
     }, { passive: true });
 
     const observer = new MutationObserver(schedule);
-    observer.observe(wrap, { childList: true, subtree: true, attributes: true, attributeFilter: ["style"] });
+    observer.observe(wrap, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["style", "data-vela-chapter-title"],
+    });
     schedule();
   }
 
