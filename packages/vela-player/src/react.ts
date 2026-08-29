@@ -2,6 +2,7 @@ export {
   VelaPlayer,
   type VelaCaptionStyle,
   type VelaChapter,
+  type VelaDisplayMode,
   type VelaPlayerHandle,
   type VelaPlayerProps,
   type VelaPlayerState,
