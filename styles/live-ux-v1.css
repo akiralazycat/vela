@@ -1,0 +1,265 @@
+/* Phase 10 — make live playback feel like a first-class mode rather than VOD with a red dot. */
+.vela-player.is-live .vela-live-button[data-vela-live-enhanced="true"] {
+  min-width: 108px;
+  padding: 0 10px;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  background: rgba(255, 255, 255, .035);
+  color: rgba(255, 255, 255, .84);
+  font-size: 0;
+  font-variant-numeric: tabular-nums;
+  transition: background .16s ease, border-color .16s ease, color .16s ease;
+}
+
+.vela-player.is-live .vela-live-button[data-vela-live-enhanced="true"]::after {
+  content: attr(data-vela-live-label);
+  font-size: 8px;
+  font-weight: 620;
+  letter-spacing: .065em;
+  white-space: nowrap;
+}
+
+.vela-player.is-live .vela-live-button[data-vela-live-state="edge"] {
+  border-color: rgba(255, 93, 93, .14);
+  background: rgba(255, 93, 93, .055);
+  color: rgba(255, 255, 255, .9);
+}
+
+.vela-player.is-live .vela-live-button[data-vela-live-state="behind"] {
+  border-color: rgba(255, 255, 255, .16);
+  background: rgba(255, 255, 255, .075);
+  color: #fff;
+}
+
+.vela-player.is-live .vela-live-button[data-vela-live-state="behind"]:hover,
+.vela-player.is-live .vela-live-button[data-vela-live-state="behind"]:focus-visible {
+  background: rgba(255, 255, 255, .13);
+}
+
+.vela-player.is-live .vela-live-button > span {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+}
+
+.vela-player.is-live .vela-live-button[data-vela-live-state="edge"] > span {
+  box-shadow: 0 0 0 4px rgba(255, 79, 79, .12);
+}
+
+/* The DVR window is represented directly on the timeline. It stays quiet until
+   controls are visible, then provides both the available history and live edge. */
+.vela-live-timeline-context {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  top: -8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  opacity: 0;
+  transform: translateY(2px);
+  pointer-events: none;
+  color: rgba(255, 255, 255, .38);
+  font-size: 7px;
+  font-weight: 560;
+  letter-spacing: .065em;
+  line-height: 1;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  transition: opacity .16s ease, transform .16s ease;
+}
+
+.vela-player.is-live.has-started.is-controls-visible .vela-live-timeline-context {
+  opacity: 1;
+  transform: none;
+}
+
+.vela-player.is-live:has(.vela-preview) .vela-live-timeline-context,
+.vela-player.is-live:has(.vela-settings-popover) .vela-live-timeline-context {
+  opacity: 0;
+}
+
+.vela-live-timeline-context [data-part="edge"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(255, 255, 255, .56);
+}
+
+.vela-live-timeline-context [data-part="edge"]::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ff5d5d;
+}
+
+.vela-live-timeline-context [data-part="edge"][data-state="behind"] {
+  color: rgba(255, 255, 255, .78);
+}
+
+/* Live has no useful thumbnail in many manifests. Replace the empty 16:9 card
+   with a precise offset bubble while scrubbing the DVR window. */
+.vela-player.is-live .vela-preview {
+  width: auto;
+  min-width: 88px;
+  height: 38px;
+  aspect-ratio: auto;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 999px;
+  background: rgba(7, 8, 7, .82);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(255, 255, 255, .07);
+  backdrop-filter: blur(16px) saturate(1.18);
+  -webkit-backdrop-filter: blur(16px) saturate(1.18);
+}
+
+.vela-player.is-live .vela-preview-image,
+.vela-player.is-live .vela-preview-empty,
+.vela-player.is-live .vela-preview > span,
+.vela-player.is-live .vela-preview .vela-preview-chapter {
+  display: none !important;
+}
+
+.vela-player.is-live .vela-preview::before,
+.vela-player.is-live .vela-preview::after {
+  position: static;
+  inset: auto;
+  display: inline;
+  pointer-events: none;
+  background: none;
+}
+
+.vela-player.is-live .vela-preview::before {
+  content: attr(data-vela-live-preview-kicker);
+  color: rgba(255, 255, 255, .42);
+  font-size: 7px;
+  font-weight: 620;
+  letter-spacing: .08em;
+}
+
+.vela-player.is-live .vela-preview::after {
+  content: attr(data-vela-live-preview-label);
+  color: rgba(255, 255, 255, .92);
+  font-size: 11px;
+  font-weight: 580;
+  letter-spacing: -.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.vela-player.is-live .vela-preview[data-vela-live-preview-state="edge"]::before {
+  color: rgba(255, 93, 93, .78);
+}
+
+/* The existing live intelligence chip becomes a direct recovery affordance
+   when playback falls behind the edge. */
+.vela-signal-chip[data-kind="live"][data-vela-live-action="return"] {
+  pointer-events: auto;
+  cursor: pointer;
+  border-color: rgba(255, 93, 93, .17);
+  color: rgba(255, 255, 255, .9);
+}
+
+.vela-signal-chip[data-kind="live"][data-vela-live-action="return"]:hover,
+.vela-signal-chip[data-kind="live"][data-vela-live-action="return"]:focus-visible {
+  background: rgba(255, 255, 255, .1);
+}
+
+.vela-live-confirmation {
+  position: absolute;
+  z-index: 9;
+  left: 50%;
+  top: 50%;
+  min-width: 150px;
+  padding: 12px 16px;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 16px;
+  background: rgba(7, 8, 7, .76);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .3), inset 0 1px 0 rgba(255, 255, 255, .07);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  opacity: 0;
+  transform: translate(-50%, -46%) scale(.97);
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.vela-live-confirmation.is-visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.vela-live-confirmation small {
+  color: rgba(255, 93, 93, .72);
+  font-size: 7px;
+  font-weight: 650;
+  letter-spacing: .14em;
+}
+
+.vela-live-confirmation strong {
+  color: rgba(255, 255, 255, .94);
+  font-size: 12px;
+  font-weight: 560;
+  letter-spacing: -.01em;
+}
+
+.vela-live-confirmation span {
+  color: rgba(255, 255, 255, .48);
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Keep Minimal true to its name: Go Live remains, secondary DVR context does not. */
+.vela-display-frame[data-vela-display="minimal"] .vela-live-timeline-context {
+  display: none;
+}
+
+@media (max-width: 650px) {
+  .vela-player.is-live .vela-live-button[data-vela-live-enhanced="true"] {
+    min-width: 92px;
+    padding-inline: 8px;
+  }
+
+  .vela-player.is-live .vela-live-button[data-vela-live-enhanced="true"]::after {
+    font-size: 7.5px;
+  }
+
+  .vela-live-timeline-context {
+    top: -7px;
+    font-size: 6.5px;
+  }
+
+  .vela-player.is-live .vela-preview {
+    min-width: 82px;
+    height: 36px;
+    padding-inline: 11px;
+  }
+
+  .vela-live-confirmation {
+    min-width: 138px;
+    padding: 11px 14px;
+  }
+}
+
+@media (max-width: 390px) {
+  .vela-live-timeline-context [data-part="window"] {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vela-live-timeline-context,
+  .vela-live-confirmation,
+  .vela-player.is-live .vela-live-button[data-vela-live-enhanced="true"] {
+    transition: none;
+  }
+}
