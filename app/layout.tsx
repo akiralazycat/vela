@@ -11,7 +11,6 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="en">
       <body>
-        <script src="/vela-settings-layer.js" defer />
         <script src="/vela-playback-signals.js" defer />
         <script src="/vela-audio-ux.js" defer />
         <script src="/vela-live-ux.js" defer />
