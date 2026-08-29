@@ -89,7 +89,7 @@
       const selected = buttons.find((button) => button.classList.contains("selected"));
       if (buttons.length > 1 && selected) {
         const detail = selected.querySelector("small")?.textContent?.trim();
-        const label = firstText(selected);
+        const label = selected.dataset.velaAudioLabel || firstText(selected);
         const concise = detail || label;
         if (concise) player.dataset.velaAudioSignal = concise.toUpperCase();
       }
@@ -155,11 +155,40 @@
     }
   }
 
+  function openAudioSettings(player) {
+    const settings = player.querySelector(".vela-settings-button");
+    if (!(settings instanceof HTMLButtonElement)) return;
+    if (!player.querySelector(".vela-settings-popover")) settings.click();
+
+    window.setTimeout(() => {
+      const rows = Array.from(player.querySelectorAll(".vela-settings-nav-row"));
+      const findRow = (label) => rows.find(
+        (row) => row.querySelector(".vela-settings-nav-label")?.textContent?.trim() === label,
+      );
+      const more = findRow("More settings");
+      if (more instanceof HTMLButtonElement) more.click();
+
+      window.setTimeout(() => {
+        const audio = Array.from(player.querySelectorAll(".vela-settings-nav-row")).find(
+          (row) => row.querySelector(".vela-settings-nav-label")?.textContent?.trim() === "Audio",
+        );
+        if (audio instanceof HTMLButtonElement) audio.click();
+      }, 0);
+    }, 0);
+  }
+
   function chip(kind, text) {
-    const node = document.createElement("span");
+    const node = document.createElement(kind === "audio" ? "button" : "span");
     node.className = "vela-signal-chip";
     node.dataset.kind = kind;
     node.textContent = text;
+
+    if (node instanceof HTMLButtonElement) {
+      node.type = "button";
+      node.dataset.velaAudioQuick = "true";
+      node.setAttribute("aria-label", `Audio: ${text}. Open audio settings.`);
+    }
+
     return node;
   }
 
@@ -186,7 +215,8 @@
     if (!(rail instanceof HTMLElement)) {
       rail = document.createElement("div");
       rail.className = "vela-signal-rail";
-      rail.setAttribute("aria-hidden", "true");
+      rail.setAttribute("role", "group");
+      rail.setAttribute("aria-label", "Playback information");
       player.append(rail);
     }
 
@@ -220,7 +250,16 @@
       });
     }
 
-    player.addEventListener("click", () => window.setTimeout(schedule, 0));
+    player.addEventListener("click", (event) => {
+      if (event.target instanceof Element) {
+        const audioChip = event.target.closest('.vela-signal-chip[data-kind="audio"][data-vela-audio-quick="true"]');
+        if (audioChip) {
+          openAudioSettings(player);
+          return;
+        }
+      }
+      window.setTimeout(schedule, 0);
+    });
 
     const observer = new MutationObserver(schedule);
     observer.observe(player, {

@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, type CSSProperties, useEffect, useRef, useState } from "react";
+import { AudioSettings, describeAudioOption, type AudioSettingsOption } from "./AudioSettings";
 
 type SettingsView =
   | "root"
@@ -16,13 +17,6 @@ type SettingsView =
 type SettingsQualityOption = {
   height: number;
   bandwidth: number;
-};
-
-type SettingsAudioOption = {
-  id: string;
-  label: string;
-  language: string;
-  detail: string;
 };
 
 type SettingsTextOption = {
@@ -50,7 +44,7 @@ type SettingsMenuProps = {
   selectedQuality: "auto" | number;
   qualities: ReadonlyArray<SettingsQualityOption>;
   speed: number;
-  audioOptions: ReadonlyArray<SettingsAudioOption>;
+  audioOptions: ReadonlyArray<AudioSettingsOption>;
   selectedAudio: string | null;
   textOptions: ReadonlyArray<SettingsTextOption>;
   selectedText: "off" | string;
@@ -161,6 +155,7 @@ function SettingsMenuImpl({
   }, []);
 
   const selectedAudioOption = audioOptions.find((option) => option.id === selectedAudio);
+  const selectedAudioPresentation = describeAudioOption(selectedAudioOption);
   const selectedTextOption = textOptions.find((option) => option.id === selectedText);
   const selectedChapter = chapters.find((chapter) => chapter.start === currentChapterStart);
   const qualityValue = selectedQuality === "auto"
@@ -203,7 +198,7 @@ function SettingsMenuImpl({
           <>
             <Header title="More settings" onBack={() => setView("root")} />
             <div className="vela-settings-nav-list vela-settings-nav-list-secondary">
-              {audioOptions.length ? <NavRow label="Audio" value={selectedAudioOption?.label} onClick={() => setView("audio")} /> : null}
+              {audioOptions.length ? <NavRow label="Audio" value={selectedAudioPresentation?.label} onClick={() => setView("audio")} /> : null}
               {textOptions.length ? <NavRow label="Subtitles" value={subtitleValue} onClick={() => setView("subtitles")} /> : null}
               {chapters.length ? <NavRow label="Chapters" value={selectedChapter?.title} onClick={() => setView("chapters")} /> : null}
               {textOptions.length ? <NavRow label="Accessibility" value={accessibilityValue} onClick={() => setView("accessibility")} /> : null}
@@ -217,14 +212,12 @@ function SettingsMenuImpl({
       </div>
 
       {audioOptions.length ? (
-        <section style={sectionStyle("audio")}>
-          <span>AUDIO</span>
-          {audioOptions.map((option) => (
-            <button key={option.id} type="button" className={selectedAudio === option.id ? "selected" : ""} onClick={() => onSelectAudio(option.id)}>
-              {option.label}<small>{option.language.toUpperCase()} · {option.detail}</small>
-            </button>
-          ))}
-        </section>
+        <AudioSettings
+          options={audioOptions}
+          selectedAudio={selectedAudio}
+          style={sectionStyle("audio")}
+          onSelect={onSelectAudio}
+        />
       ) : null}
 
       {qualities.length ? (
