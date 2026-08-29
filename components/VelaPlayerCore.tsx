@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { ControlDock } from "./player/ControlDock";
 import { Timeline } from "./player/Timeline";
 
 export type VelaSourceType = "auto" | "hls" | "dash" | "mp4";
@@ -1089,168 +1090,126 @@ export const VelaPlayer = forwardRef<VelaPlayerHandle, VelaPlayerProps>(function
           onSeek={seekTo}
         />
 
-        <div className="vela-control-row">
-          <div className="vela-control-group">
-            <button className="vela-icon-button primary" type="button" onClick={() => void togglePlay()} aria-label={playing ? "Pause" : "Play"}>
-              <Icon name={playing ? "pause" : "play"} />
-            </button>
-
-            <div className="vela-volume-cluster">
-              <button className="vela-icon-button" type="button" onClick={toggleMute} aria-label={muted ? "Unmute" : "Mute"}>
-                <Icon name={muted || volume === 0 ? "muted" : "volume"} />
-              </button>
-              <input
-                className="vela-volume-input"
-                type="range"
-                min={0}
-                max={1}
-                step="0.01"
-                value={muted ? 0 : volume}
-                onChange={(event) => setVolume(Number(event.target.value))}
-                aria-label="Volume"
-              />
-            </div>
-
-            {isLive ? (
-              <button className={`vela-live-button ${atLiveEdge ? "is-live-edge" : ""}`} type="button" onClick={goLive}>
-                <span />
-                {atLiveEdge ? "LIVE" : `GO LIVE · -${formatTime(Math.max(timelineEnd - currentTime, 0))}`}
-              </button>
-            ) : (
-              <div className="vela-timecode" aria-label={`${formatTime(currentTime)} of ${formatTime(duration)}`}>
-                <span>{formatTime(currentTime)}</span><i>/</i><span>{formatTime(duration)}</span>
-              </div>
-            )}
-
-            {currentChapter ? <span className="vela-current-chapter">{currentChapter.title}</span> : null}
-          </div>
-
-          <div className="vela-control-group right">
-            {textOptions.length ? (
-              <button className={`vela-icon-button ${selectedText !== "off" ? "is-active" : ""}`} type="button" onClick={toggleCaptions} aria-label="Toggle captions">
-                <Icon name="captions" />
-              </button>
-            ) : null}
-
-            {!isLive ? (
-              <button className={`vela-icon-button ${loop ? "is-active" : ""}`} type="button" onClick={() => setLoop((value) => !value)} aria-label="Toggle loop">
-                <Icon name="loop" />
-              </button>
-            ) : null}
-
-            <div className="vela-settings-menu">
-              <button
-                className={`vela-settings-button ${settingsOpen ? "is-active" : ""}`}
-                type="button"
-                onClick={() => setSettingsOpen((value) => !value)}
-                aria-expanded={settingsOpen}
-                aria-label="Playback settings"
-              >
-                <span>{selectedQuality === "auto" ? "AUTO" : `${selectedQuality}P`}</span>
-                <Icon name="settings" />
-              </button>
-
-              {settingsOpen ? (
-                <div className="vela-popover vela-settings-popover" role="dialog" aria-label="Playback settings">
-                  {audioOptions.length ? (
-                    <section>
-                      <span>AUDIO</span>
-                      {audioOptions.map((option) => (
-                        <button key={option.id} type="button" className={selectedAudio === option.id ? "selected" : ""} onClick={() => selectAudioTrack(option.id)}>
-                          {option.label}<small>{option.language.toUpperCase()} · {option.detail}</small>
-                        </button>
-                      ))}
-                    </section>
-                  ) : null}
-
-                  {qualities.length ? (
-                    <section>
-                      <span>QUALITY</span>
-                      <button type="button" className={selectedQuality === "auto" ? "selected" : ""} onClick={() => selectQuality("auto")}>Auto <small>adaptive</small></button>
-                      {qualities.map((option) => (
-                        <button key={option.height} type="button" className={selectedQuality === option.height ? "selected" : ""} onClick={() => selectQuality(option.height)}>
-                          {option.height}p <small>{(option.bandwidth / 1_000_000).toFixed(1)} Mbps</small>
-                        </button>
-                      ))}
-                    </section>
-                  ) : null}
-
-                  {!isLive ? (
-                    <section>
-                      <span>SPEED</span>
-                      <div className="vela-speed-grid">
-                        {speeds.map((value) => (
-                          <button key={value} type="button" className={speed === value ? "selected" : ""} onClick={() => onSpeedChange(value)}>{value}×</button>
-                        ))}
-                      </div>
-                    </section>
-                  ) : null}
-
-                  {textOptions.length ? (
-                    <section>
-                      <span>SUBTITLES</span>
-                      <button type="button" className={selectedText === "off" ? "selected" : ""} onClick={() => selectTextTrack("off")}>Off</button>
-                      {textOptions.map((option) => (
-                        <button key={option.id} type="button" className={selectedText === option.id ? "selected" : ""} onClick={() => selectTextTrack(option.id)}>
-                          {option.label}<small>{option.language.toUpperCase()}</small>
-                        </button>
-                      ))}
-                    </section>
-                  ) : null}
-
-                  {textOptions.length ? (
-                    <section>
-                      <span>SUBTITLE STYLE</span>
-                      <div className="vela-setting-label">SIZE</div>
-                      <div className="vela-speed-grid">
-                        {[0.8, 1, 1.2, 1.4].map((value) => (
-                          <button key={value} type="button" className={captionStyleState.fontScale === value ? "selected" : ""} onClick={() => setCaptionStyle({ fontScale: value })}>{Math.round(value * 100)}%</button>
-                        ))}
-                      </div>
-                      <div className="vela-setting-label">EDGE</div>
-                      <div className="vela-speed-grid">
-                        {(["none", "shadow", "outline"] as const).map((value) => (
-                          <button key={value} type="button" className={captionStyleState.edge === value ? "selected" : ""} onClick={() => setCaptionStyle({ edge: value })}>{value}</button>
-                        ))}
-                      </div>
-                      <div className="vela-setting-label">BACKGROUND</div>
-                      <div className="vela-speed-grid">
-                        {[0, 0.5, 0.82].map((value) => (
-                          <button key={value} type="button" className={captionStyleState.backgroundOpacity === value ? "selected" : ""} onClick={() => setCaptionStyle({ backgroundOpacity: value })}>{Math.round(value * 100)}%</button>
-                        ))}
-                      </div>
-                    </section>
-                  ) : null}
-
-                  {resolvedChapters.length ? (
-                    <section>
-                      <span>CHAPTERS</span>
-                      {resolvedChapters.map((chapter, index) => (
-                        <button
-                          key={chapter.id ?? `${chapter.start}-${chapter.title}`}
-                          type="button"
-                          className={currentChapter === chapter ? "selected" : ""}
-                          onClick={() => seekTo(chapter.start)}
-                        >
-                          {chapter.title}<small>{formatTime(chapter.start)} · {String(index + 1).padStart(2, "0")}</small>
-                        </button>
-                      ))}
-                    </section>
-                  ) : null}
-
-                  <section className="vela-shortcuts">
-                    <span>SHORTCUTS / GESTURES</span>
-                    <p><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd> seek / play · <kbd>C</kbd> captions · <kbd>F</kbd> fullscreen</p>
-                    <p>double tap ±10s · swipe horizontally up to ±30s</p>
-                  </section>
-                </div>
+        <ControlDock
+          playing={playing}
+          muted={muted}
+          volume={volume}
+          currentTime={currentTime}
+          duration={duration}
+          isLive={isLive}
+          atLiveEdge={atLiveEdge}
+          timelineEnd={timelineEnd}
+          currentChapterTitle={currentChapter?.title}
+          hasTextTracks={textOptions.length > 0}
+          captionsActive={selectedText !== "off"}
+          loop={loop}
+          selectedQuality={selectedQuality}
+          settingsOpen={settingsOpen}
+          onTogglePlay={togglePlay}
+          onToggleMute={toggleMute}
+          onVolumeChange={setVolume}
+          onGoLive={goLive}
+          onToggleCaptions={toggleCaptions}
+          onToggleLoop={() => setLoop((value) => !value)}
+          onToggleSettings={() => setSettingsOpen((value) => !value)}
+          onPictureInPicture={togglePip}
+          onFullscreen={toggleFullscreen}
+          settingsPanel={settingsOpen ? (
+            <div className="vela-popover vela-settings-popover" role="dialog" aria-label="Playback settings">
+              {audioOptions.length ? (
+                <section>
+                  <span>AUDIO</span>
+                  {audioOptions.map((option) => (
+                    <button key={option.id} type="button" className={selectedAudio === option.id ? "selected" : ""} onClick={() => selectAudioTrack(option.id)}>
+                      {option.label}<small>{option.language.toUpperCase()} · {option.detail}</small>
+                    </button>
+                  ))}
+                </section>
               ) : null}
-            </div>
 
-            <button className="vela-icon-button desktop-only" type="button" onClick={() => void togglePip()} aria-label="Picture in picture"><Icon name="pip" /></button>
-            <button className="vela-icon-button" type="button" onClick={() => void toggleFullscreen()} aria-label="Fullscreen"><Icon name="fullscreen" /></button>
-          </div>
-        </div>
+              {qualities.length ? (
+                <section>
+                  <span>QUALITY</span>
+                  <button type="button" className={selectedQuality === "auto" ? "selected" : ""} onClick={() => selectQuality("auto")}>Auto <small>adaptive</small></button>
+                  {qualities.map((option) => (
+                    <button key={option.height} type="button" className={selectedQuality === option.height ? "selected" : ""} onClick={() => selectQuality(option.height)}>
+                      {option.height}p <small>{(option.bandwidth / 1_000_000).toFixed(1)} Mbps</small>
+                    </button>
+                  ))}
+                </section>
+              ) : null}
+
+              {!isLive ? (
+                <section>
+                  <span>SPEED</span>
+                  <div className="vela-speed-grid">
+                    {speeds.map((value) => (
+                      <button key={value} type="button" className={speed === value ? "selected" : ""} onClick={() => onSpeedChange(value)}>{value}×</button>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
+              {textOptions.length ? (
+                <section>
+                  <span>SUBTITLES</span>
+                  <button type="button" className={selectedText === "off" ? "selected" : ""} onClick={() => selectTextTrack("off")}>Off</button>
+                  {textOptions.map((option) => (
+                    <button key={option.id} type="button" className={selectedText === option.id ? "selected" : ""} onClick={() => selectTextTrack(option.id)}>
+                      {option.label}<small>{option.language.toUpperCase()}</small>
+                    </button>
+                  ))}
+                </section>
+              ) : null}
+
+              {textOptions.length ? (
+                <section>
+                  <span>SUBTITLE STYLE</span>
+                  <div className="vela-setting-label">SIZE</div>
+                  <div className="vela-speed-grid">
+                    {[0.8, 1, 1.2, 1.4].map((value) => (
+                      <button key={value} type="button" className={captionStyleState.fontScale === value ? "selected" : ""} onClick={() => setCaptionStyle({ fontScale: value })}>{Math.round(value * 100)}%</button>
+                    ))}
+                  </div>
+                  <div className="vela-setting-label">EDGE</div>
+                  <div className="vela-speed-grid">
+                    {(["none", "shadow", "outline"] as const).map((value) => (
+                      <button key={value} type="button" className={captionStyleState.edge === value ? "selected" : ""} onClick={() => setCaptionStyle({ edge: value })}>{value}</button>
+                    ))}
+                  </div>
+                  <div className="vela-setting-label">BACKGROUND</div>
+                  <div className="vela-speed-grid">
+                    {[0, 0.5, 0.82].map((value) => (
+                      <button key={value} type="button" className={captionStyleState.backgroundOpacity === value ? "selected" : ""} onClick={() => setCaptionStyle({ backgroundOpacity: value })}>{Math.round(value * 100)}%</button>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
+              {resolvedChapters.length ? (
+                <section>
+                  <span>CHAPTERS</span>
+                  {resolvedChapters.map((chapter, index) => (
+                    <button
+                      key={chapter.id ?? `${chapter.start}-${chapter.title}`}
+                      type="button"
+                      className={currentChapter === chapter ? "selected" : ""}
+                      onClick={() => seekTo(chapter.start)}
+                    >
+                      {chapter.title}<small>{formatTime(chapter.start)} · {String(index + 1).padStart(2, "0")}</small>
+                    </button>
+                  ))}
+                </section>
+              ) : null}
+
+              <section className="vela-shortcuts">
+                <span>SHORTCUTS / GESTURES</span>
+                <p><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd> seek / play · <kbd>C</kbd> captions · <kbd>F</kbd> fullscreen</p>
+                <p>double tap ±10s · swipe horizontally up to ±30s</p>
+              </section>
+            </div>
+          ) : null}
+        />
       </div>
     </div>
   );
