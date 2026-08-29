@@ -2,6 +2,7 @@
 @import "../styles/player-shell-v1.css";
 @import "../styles/settings-layer-v1.css";
 @import "../styles/timeline-preview-v1.css";
+@import "../styles/mobile-touch-v1.css";
 @import "../styles/site.css";
 
 :root {

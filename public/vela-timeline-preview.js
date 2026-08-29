@@ -73,11 +73,31 @@
     if (!(wrap instanceof HTMLElement) || wrap.dataset.velaPreviewEnhanced === "true") return;
     wrap.dataset.velaPreviewEnhanced = "true";
 
+    let touchPointerId = null;
     const schedule = () => requestAnimationFrame(() => sync(wrap));
+    const finishTouchScrub = (event) => {
+      if (touchPointerId === null || event.pointerId !== touchPointerId) return;
+      touchPointerId = null;
+      wrap.classList.remove("is-touch-scrubbing");
+      wrap.style.setProperty("--vela-preview-anchor-opacity", "0");
+    };
+
+    wrap.addEventListener("pointerdown", (event) => {
+      if (event.pointerType !== "touch" && event.pointerType !== "pen") return;
+      touchPointerId = event.pointerId;
+      wrap.classList.add("is-touch-scrubbing");
+      schedule();
+    }, { passive: true });
+
     wrap.addEventListener("pointermove", schedule, { passive: true });
     wrap.addEventListener("pointerenter", schedule, { passive: true });
+    wrap.addEventListener("pointerup", finishTouchScrub, { passive: true });
+    wrap.addEventListener("pointercancel", finishTouchScrub, { passive: true });
+    wrap.addEventListener("lostpointercapture", finishTouchScrub, { passive: true });
     wrap.addEventListener("pointerleave", () => {
-      wrap.style.setProperty("--vela-preview-anchor-opacity", "0");
+      if (!wrap.classList.contains("is-touch-scrubbing")) {
+        wrap.style.setProperty("--vela-preview-anchor-opacity", "0");
+      }
     }, { passive: true });
 
     const observer = new MutationObserver(schedule);

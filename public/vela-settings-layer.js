@@ -47,12 +47,32 @@
     return button;
   }
 
+  function makeActionRow(action, label, value) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "vela-settings-nav-row vela-settings-nav-action";
+    button.dataset.velaSettingsAction = action;
+
+    const labelNode = document.createElement("span");
+    labelNode.className = "vela-settings-nav-label";
+    labelNode.textContent = label;
+
+    const valueNode = document.createElement("span");
+    valueNode.className = "vela-settings-nav-value";
+    valueNode.textContent = value;
+
+    button.append(labelNode, valueNode);
+    return button;
+  }
+
   function enhance(popover) {
     if (!(popover instanceof HTMLElement) || popover.dataset.velaLayered === "true") return;
     popover.dataset.velaLayered = "true";
 
     const sections = Array.from(popover.querySelectorAll(":scope > section"));
     const byTitle = new Map(sections.map((section) => [sectionTitle(section), section]));
+    const player = popover.closest(".vela-player");
+    const loopButton = player?.querySelector('button[aria-label="Toggle loop"]');
 
     const shell = document.createElement("div");
     shell.className = "vela-settings-layer";
@@ -127,6 +147,9 @@
         if (subtitles) list.append(makeRow("subtitles", "Subtitles", selectedValue(subtitles) || "Off"));
         if (chapters) list.append(makeRow("chapters", "Chapters", selectedValue(chapters)));
         if (accessibility) list.append(makeRow("accessibility", "Accessibility", "Captions"));
+        if (loopButton instanceof HTMLElement) {
+          list.append(makeActionRow("loop", "Loop", loopButton.classList.contains("is-active") ? "On" : "Off"));
+        }
         if (controls) list.append(makeRow("controls", "Controls", "Shortcuts"));
         shell.append(list);
         return;
@@ -147,9 +170,17 @@
 
     shell.addEventListener("click", (event) => {
       const target = event.target instanceof Element
-        ? event.target.closest("[data-vela-settings-view]")
+        ? event.target.closest("[data-vela-settings-view], [data-vela-settings-action]")
         : null;
       if (!(target instanceof HTMLElement)) return;
+
+      const action = target.dataset.velaSettingsAction;
+      if (action === "loop" && loopButton instanceof HTMLButtonElement) {
+        loopButton.click();
+        window.setTimeout(() => render("more"), 0);
+        return;
+      }
+
       const view = target.dataset.velaSettingsView;
       if (view) render(view);
     });

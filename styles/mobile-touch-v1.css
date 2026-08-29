@@ -1,0 +1,204 @@
+/* Phase 06 — touch-first ergonomics without changing Vela's playback engine. */
+
+@media (max-width: 650px) {
+  .vela-controls {
+    top: max(8px, env(safe-area-inset-top));
+    bottom: max(8px, env(safe-area-inset-bottom));
+  }
+
+  .vela-settings-menu {
+    position: static;
+  }
+
+  .vela-settings-popover[data-vela-layered="true"] {
+    left: 0;
+    right: 0;
+    bottom: 66px;
+    width: auto;
+    max-height: min(54dvh, 430px);
+    padding-bottom: max(7px, env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .vela-player {
+    touch-action: pan-y pinch-zoom;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .vela-video {
+    touch-action: pan-y;
+  }
+
+  .vela-player button {
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Hardware volume is the primary mobile control; keep the transport dock quiet. */
+  .vela-volume-cluster {
+    display: none;
+  }
+
+  /* Loop remains available through More settings on touch devices. */
+  .vela-control-group.right > button[aria-label="Toggle loop"] {
+    display: none;
+  }
+
+  .vela-control-row {
+    min-height: 56px;
+    padding: 7px 6px;
+    gap: 4px;
+  }
+
+  .vela-icon-button,
+  .vela-settings-button {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+  }
+
+  .vela-settings-button {
+    padding: 0;
+  }
+
+  .vela-settings-button > span {
+    display: none;
+  }
+
+  .vela-timecode {
+    gap: 4px;
+    padding: 0 4px 0 2px;
+    font-size: 10px;
+  }
+
+  /* Current time is enough in the compressed dock; duration stays in semantics. */
+  .vela-timecode i,
+  .vela-timecode i + span {
+    display: none;
+  }
+
+  .vela-timeline-wrap {
+    left: 92px;
+    right: 94px;
+    bottom: 11px;
+    height: 38px;
+    touch-action: none;
+  }
+
+  .vela-player.is-live .vela-timeline-wrap {
+    left: 126px;
+  }
+
+  .vela-timeline {
+    height: 3px;
+  }
+
+  .vela-seek-input {
+    height: 44px;
+    touch-action: none;
+  }
+
+  .vela-seek-input::-webkit-slider-runnable-track {
+    height: 3px;
+  }
+
+  .vela-seek-input::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+    margin-top: -6.5px;
+  }
+
+  .vela-seek-input::-moz-range-track {
+    height: 3px;
+  }
+
+  .vela-seek-input::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Preview is a scrubbing affordance on touch, not a sticky hover artifact. */
+  .vela-timeline-wrap .vela-preview {
+    bottom: calc(100% + 18px);
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .vela-timeline-wrap.is-touch-scrubbing .vela-preview {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .vela-timeline-wrap::after {
+    opacity: 0 !important;
+  }
+
+  .vela-settings-nav-row {
+    min-height: 52px !important;
+  }
+
+  .vela-settings-back {
+    width: 40px;
+    height: 40px;
+  }
+
+  .vela-control-group.right > .vela-icon-button:last-child {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+  }
+
+  .vela-icon-button:active,
+  .vela-settings-button:active,
+  .vela-settings-nav-row:active,
+  .vela-settings-back:active {
+    background: rgba(255, 255, 255, .15) !important;
+    transform: scale(.96);
+  }
+
+  .vela-live-button {
+    max-width: 112px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+
+@media (max-width: 390px) and (hover: none) and (pointer: coarse) {
+  .vela-control-row {
+    padding-inline: 4px;
+  }
+
+  .vela-timeline-wrap {
+    left: 84px;
+    right: 88px;
+  }
+
+  .vela-player.is-live .vela-timeline-wrap {
+    left: 116px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) and (hover: none) and (pointer: coarse) {
+  .vela-settings-popover[data-vela-layered="true"] {
+    max-height: calc(100dvh - 104px);
+  }
+
+  .vela-preview {
+    width: min(176px, 30vw);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vela-icon-button:active,
+  .vela-settings-button:active,
+  .vela-settings-nav-row:active,
+  .vela-settings-back:active {
+    transform: none;
+  }
+}
