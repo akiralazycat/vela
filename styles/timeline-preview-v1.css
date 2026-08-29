@@ -1,0 +1,127 @@
+/* Phase 05 — make timeline scrubbing feel like a first-class preview surface. */
+.vela-preview {
+  --vela-preview-edge-shift: 0px;
+  width: clamp(156px, 20vw, 236px);
+  aspect-ratio: 16 / 9;
+  transform: translateX(calc(-50% + var(--vela-preview-edge-shift)));
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .24);
+  border-radius: 18px;
+  background: rgba(8, 9, 8, .94);
+  box-shadow:
+    0 22px 56px rgba(0, 0, 0, .42),
+    0 3px 12px rgba(0, 0, 0, .24),
+    inset 0 1px 0 rgba(255, 255, 255, .1);
+  backdrop-filter: blur(18px) saturate(1.12);
+  -webkit-backdrop-filter: blur(18px) saturate(1.12);
+  animation: vela-preview-enter .14s ease-out both;
+  will-change: transform;
+}
+
+.vela-preview::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 48%, rgba(0, 0, 0, .42) 100%);
+}
+
+.vela-preview-image,
+.vela-preview-empty {
+  position: absolute;
+  inset: 0;
+}
+
+.vela-preview-image {
+  transform: scale(1.002);
+}
+
+.vela-preview-empty {
+  background:
+    radial-gradient(circle at 50% 34%, rgba(255,255,255,.09), transparent 38%),
+    linear-gradient(145deg, rgba(255,255,255,.04), transparent 55%),
+    #10110f;
+}
+
+.vela-preview > span:not(.vela-preview-chapter) {
+  z-index: 2;
+  right: auto;
+  left: 50%;
+  bottom: 9px;
+  transform: translateX(-50%);
+  min-width: 48px;
+  padding: 5px 8px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 999px;
+  background: rgba(5, 5, 5, .64);
+  color: rgba(255,255,255,.96);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-size: 9px;
+  font-weight: 550;
+  letter-spacing: .015em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.vela-preview-chapter {
+  position: absolute;
+  z-index: 2;
+  left: 10px;
+  right: 10px;
+  bottom: 35px;
+  overflow: hidden;
+  color: rgba(255,255,255,.84);
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 7px rgba(0,0,0,.52);
+}
+
+.vela-preview.is-edge-adjusted {
+  transition: transform .08s linear;
+}
+
+.vela-timeline-wrap::after {
+  content: "";
+  position: absolute;
+  left: var(--vela-preview-anchor, -100px);
+  top: 50%;
+  width: 1px;
+  height: 8px;
+  transform: translate(-.5px, -50%);
+  background: rgba(255,255,255,.6);
+  opacity: var(--vela-preview-anchor-opacity, 0);
+  pointer-events: none;
+  transition: opacity .1s ease;
+}
+
+@keyframes vela-preview-enter {
+  from { opacity: 0; transform: translateX(calc(-50% + var(--vela-preview-edge-shift))) translateY(4px) scale(.97); }
+  to { opacity: 1; transform: translateX(calc(-50% + var(--vela-preview-edge-shift))) translateY(0) scale(1); }
+}
+
+@media (max-width: 650px) {
+  .vela-preview {
+    width: clamp(138px, 42vw, 188px);
+    border-radius: 15px;
+  }
+
+  .vela-preview > span:not(.vela-preview-chapter) {
+    bottom: 7px;
+    padding: 4px 7px;
+  }
+
+  .vela-preview-chapter {
+    bottom: 31px;
+    font-size: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vela-preview { animation: none; }
+  .vela-preview.is-edge-adjusted { transition: none; }
+}
