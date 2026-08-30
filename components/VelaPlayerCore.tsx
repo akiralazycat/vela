@@ -2,10 +2,8 @@
 
 import {
   forwardRef,
-  type KeyboardEvent as ReactKeyboardEvent,
   useCallback,
   useEffect,
-  useImperativeHandle,
   useMemo,
   useRef,
   useState,
@@ -16,7 +14,6 @@ import type {
   VelaChapter,
   VelaPlayerHandle,
   VelaPlayerProps,
-  VelaPlayerState,
   VelaTextTrack,
 } from "./player/core/contracts";
 import {
@@ -24,13 +21,13 @@ import {
   DEFAULT_CAPTION_STYLE,
   DEFAULT_THEME,
 } from "./player/core/playerStyle";
-import { clamp } from "./player/core/utils";
 import { PlayerSurfaceChrome } from "./player/PlayerSurfaceChrome";
 import { SettingsMenu } from "./player/SettingsMenu";
 import { Timeline } from "./player/Timeline";
 import { useControlVisibility } from "./player/useControlVisibility";
 import { useMediaControls } from "./player/useMediaControls";
 import { usePlaybackEngine } from "./player/usePlaybackEngine";
+import { usePlayerController } from "./player/usePlayerController";
 import { usePlayerGestures } from "./player/usePlayerGestures";
 
 const EMPTY_TEXT_TRACKS: VelaTextTrack[] = [];
@@ -150,98 +147,60 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
   const timelineSpan = Math.max(timelineEnd - timelineStart, 0);
   const atLiveEdge = isLive ? seekWindow.end - currentTime <= 2.5 : false;
 
-  const currentChapter = useMemo(() => {
-    return resolvedChapters.find((chapter, index) => {
-      const end = chapter.end ?? resolvedChapters[index + 1]?.start ?? timelineEnd;
-      return currentTime >= chapter.start && currentTime < end;
-    }) ?? null;
-  }, [currentTime, resolvedChapters, timelineEnd]);
-
   const style = useMemo(
     () => createPlayerStyle(mergedTheme, captionStyleState),
     [captionStyleState, mergedTheme],
   );
 
-  const getState = useCallback((): VelaPlayerState => ({
-    currentTime,
-    duration: isLive ? timelineSpan : duration,
-    paused: !playing,
-    volume,
-    muted,
-    quality: selectedQuality,
-    textTrack: selectedText,
-    audioTrack: selectedAudio,
-    sourceType: resolvedType,
-    isLive,
-    atLiveEdge,
-    liveLatencyMs,
-    chapter: currentChapter?.id ?? currentChapter?.title ?? null,
-    mediaBadges: badges,
-  }), [
-    atLiveEdge,
-    badges,
-    currentChapter,
-    currentTime,
-    duration,
-    isLive,
-    liveLatencyMs,
-    muted,
-    playing,
-    resolvedType,
-    selectedAudio,
-    selectedQuality,
-    selectedText,
-    timelineSpan,
-    volume,
-  ]);
-
-  useEffect(() => {
-    onStateChange?.(getState());
-  }, [getState, onStateChange]);
-
   const setCaptionStyle = useCallback((patch: Partial<VelaCaptionStyle>) => {
     setCaptionStyleState((current) => ({ ...current, ...patch }));
   }, []);
 
-  const toggleCaptions = useCallback(() => {
-    if (selectedText === "off") {
-      const first = textOptions[0];
-      if (first) selectTextTrack(first.id);
-    } else {
-      selectTextTrack("off");
-    }
-  }, [selectTextTrack, selectedText, textOptions]);
-
-  const jumpChapter = useCallback((direction: 1 | -1) => {
-    if (!resolvedChapters.length) return;
-    const currentIndex = Math.max(
-      resolvedChapters.findIndex((chapter, index) => {
-        const end = chapter.end ?? resolvedChapters[index + 1]?.start ?? timelineEnd;
-        return currentTime >= chapter.start && currentTime < end;
-      }),
-      0,
-    );
-    const targetIndex = clamp(currentIndex + direction, 0, resolvedChapters.length - 1);
-    seekTo(resolvedChapters[targetIndex].start);
-  }, [currentTime, resolvedChapters, seekTo, timelineEnd]);
-
-  const toggleFullscreen = useCallback(async () => {
-    const shell = shellRef.current;
-    if (!shell) return;
-    if (!document.fullscreenElement) await shell.requestFullscreen?.();
-    else await document.exitFullscreen?.();
-  }, []);
-
-  const togglePip = useCallback(async () => {
-    const video = videoRef.current;
-    if (!video || !("pictureInPictureEnabled" in document)) return;
-    try {
-      if (document.pictureInPictureElement) await document.exitPictureInPicture();
-      else if (video.requestPictureInPicture) await video.requestPictureInPicture();
-    } catch {
-      // PiP can be unavailable before metadata is ready or blocked by browser policy.
-    }
-  }, []);
+  const {
+    currentChapter,
+    toggleCaptions,
+    toggleFullscreen,
+    togglePip,
+    handleKeyDown,
+  } = usePlayerController({
+    ref,
+    shellRef,
+    videoRef,
+    currentTime,
+    duration,
+    timelineStart,
+    timelineEnd,
+    timelineSpan,
+    playing,
+    volume,
+    muted,
+    speed,
+    isLive,
+    atLiveEdge,
+    liveLatencyMs,
+    selectedQuality,
+    selectedText,
+    selectedAudio,
+    resolvedType,
+    badges,
+    chapters: resolvedChapters,
+    textOptions,
+    onStateChange,
+    play,
+    pause,
+    togglePlay,
+    seekTo,
+    seekBy,
+    setVolume,
+    toggleMute,
+    setPlaybackRate,
+    toggleLoop,
+    goLive,
+    selectQuality,
+    selectTextTrack,
+    selectAudioTrack,
+    setCaptionStyle,
+  });
 
   const { gestureHint, handlePointerDown, handlePointerUp } = usePlayerGestures({
     enabled: gestures,
@@ -251,61 +210,6 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
     onSeekBy: seekBy,
     onShowControls: showControls,
   });
-
-  useImperativeHandle(ref, () => ({
-    play,
-    pause,
-    seek: seekTo,
-    setVolume,
-    setQuality: selectQuality,
-    setTextTrack: selectTextTrack,
-    setAudioTrack: selectAudioTrack,
-    setCaptionStyle,
-    goLive,
-    nextChapter: () => jumpChapter(1),
-    previousChapter: () => jumpChapter(-1),
-    getState,
-  }), [
-    getState,
-    goLive,
-    jumpChapter,
-    pause,
-    play,
-    seekTo,
-    selectAudioTrack,
-    selectQuality,
-    selectTextTrack,
-    setCaptionStyle,
-    setVolume,
-  ]);
-
-  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    const tag = (event.target as HTMLElement | null)?.tagName;
-    if (tag === "INPUT" || tag === "BUTTON" || tag === "SELECT") return;
-    const key = event.key.toLowerCase();
-
-    if (event.key === " " || key === "k") {
-      event.preventDefault();
-      void togglePlay();
-    } else if (event.key === "ArrowLeft") seekBy(-5);
-    else if (event.key === "ArrowRight") seekBy(5);
-    else if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setVolume(volume + 0.05);
-    } else if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setVolume(volume - 0.05);
-    } else if (key === "j") seekBy(-10);
-    else if (key === "l" && event.shiftKey) toggleLoop();
-    else if (key === "l") seekBy(10);
-    else if (key === "m") toggleMute();
-    else if (key === "f") void toggleFullscreen();
-    else if (key === "c") toggleCaptions();
-    else if (key === "home") seekTo(timelineStart);
-    else if (key === "end") isLive ? goLive() : seekTo(timelineEnd);
-    else if (event.key === ">") setPlaybackRate(Math.min(2, speed + 0.25));
-    else if (event.key === "<") setPlaybackRate(Math.max(0.5, speed - 0.25));
-  };
 
   return (
     <div

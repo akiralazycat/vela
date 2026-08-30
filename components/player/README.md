@@ -1,6 +1,6 @@
 # Vela player architecture
 
-`components/VelaPlayer.tsx` is the public facade. `components/VelaPlayerCore.tsx` is now a thin playback controller: engine lifecycle and direct `HTMLMediaElement` operations live in hooks, while presentation and reusable contracts live below `components/player`.
+`components/VelaPlayer.tsx` is the public facade. `components/VelaPlayerCore.tsx` is now a thin wiring layer: engine lifecycle, direct `HTMLMediaElement` operations, command routing, imperative API composition, and presentation all live behind explicit boundaries under `components/player`.
 
 ## Presentation ownership
 
@@ -28,13 +28,25 @@ The media-loading lifecycle no longer lives in `VelaPlayerCore.tsx`.
 
 ## Media control boundary
 
-Direct `HTMLMediaElement` transport state and commands now live in `useMediaControls.ts`.
+Direct `HTMLMediaElement` transport state and commands live in `useMediaControls.ts`.
 
 - Owns `playing`, `started`, `currentTime`, `duration`, `buffered`, `volume`, `muted`, `speed`, and `loop` UI-facing state.
 - Owns play/pause/toggle, seek/seekBy, volume/mute, playback rate, loop application, and Go Live seeking.
 - Owns media event synchronization (`play`, `pause`, `loadedmetadata`, `durationchange`, `timeupdate`, `progress`).
 - Resets session-scoped transport state from the engine-provided `sessionKey`, while preserving user-level volume/speed/loop preferences across source changes as before.
 - Uses the adaptive player only for live seek bounds; the playback engine remains responsible for loading and track selection.
+
+## Controller boundary
+
+Cross-boundary command composition now lives in `usePlayerController.ts`.
+
+- Derives the active chapter and owns next/previous chapter navigation.
+- Composes the stable `VelaPlayerHandle` imperative API from engine and media actions.
+- Owns keyboard command routing, including input/content-editable guards, transport shortcuts, volume, captions, loop, fullscreen, Home/End, and playback-rate shortcuts.
+- Owns PiP/fullscreen commands and caption toggle composition.
+- Produces the public `VelaPlayerState` snapshot and emits `onStateChange`, keeping that contract out of the render/wiring component.
+
+`VelaPlayerCore.tsx` now keeps only state that is genuinely local to the assembled React surface (`captionStyleState`, settings-open state, theme/style composition, timeline-derived geometry) and wires engine/media/controller outputs into the extracted components. Stage 7 intentionally stops here; no additional controller micro-hooks are planned.
 
 ## Core modules
 
@@ -44,8 +56,6 @@ Direct `HTMLMediaElement` transport state and commands now live in `useMediaCont
 - `core/utils.ts` contains playback-agnostic time/clamp helpers.
 - `useControlVisibility.ts` owns control auto-hide timing.
 - `usePlayerGestures.ts` owns pointer/touch gesture interpretation and transient gesture feedback.
-
-`VelaPlayerCore.tsx` now keeps only controller responsibilities that genuinely cross boundaries: caption-style state, current chapter derivation/navigation, keyboard routing, PiP/fullscreen, imperative API composition, and wiring engine/media state into the extracted React surfaces.
 
 ## Refactor completion gate
 
@@ -57,13 +67,13 @@ This refactor has a fixed eight-stage finish line. Do not keep splitting indefin
 4. Split public contracts, adaptive helpers, style mapping, gestures, and control visibility — complete.
 5. Split Shaka/native loading into `usePlaybackEngine` + `useAdaptivePlaybackEngine` — complete.
 6. Split direct media transport operations into `useMediaControls` — complete.
-7. Final controller cleanup — keyboard command routing + imperative/chapter command composition; no new micro-hooks unless they remove a real cross-boundary dependency.
+7. Final controller cleanup — complete: keyboard routing, imperative API/state snapshot composition, chapter commands, PiP/fullscreen, and caption-toggle orchestration are isolated in `usePlayerController`.
 8. Consolidate legacy CSS shards by component, run visual/interaction regression across VOD/live/mobile/default/minimal, verify site/embed/package parity, and freeze the architecture.
 
-By stage count the refactor is **6 / 8 complete (75%)**. Weighted by remaining work, the practical completion estimate after stage 6 is **about 80%** because the final CSS/regression stage is larger than a normal extraction step.
+By stage count the refactor is **7 / 8 complete (87.5%)**. Weighted by remaining work, the practical completion estimate after stage 7 is **about 88%** because stage 8 is deliberately the larger integration/regression gate rather than another extraction step.
 
 ## Presentation runtime
 
 The presentation migration is complete. `app/layout.tsx` loads no Vela presentation scripts and the former `public/vela-*-ux.js` / playback signal bridges are retired.
 
-CSS enters through `styles/player-presentation.css`. That file is a deliberate compatibility boundary: it preserves the proven cascade order of the older `*-v1.css` shards while `app/globals.css` has only the base player, presentation boundary, and site stylesheet imports. New styling should not add another phase stylesheet. Stage 8 folds the remaining shards into component-oriented CSS after regression QA.
+CSS enters through `styles/player-presentation.css`. That file is a deliberate compatibility boundary: it preserves the proven cascade order of the older `*-v1.css` shards while `app/globals.css` has only the base player, presentation boundary, and site stylesheet imports. New styling should not add another phase stylesheet. Stage 8 folds the remaining shards into component-oriented CSS, verifies regressions/parity, and freezes this architecture.
