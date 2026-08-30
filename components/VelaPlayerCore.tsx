@@ -11,19 +11,6 @@ import {
   useState,
 } from "react";
 import { ControlDock } from "./player/ControlDock";
-import {
-  audioDetail,
-  audioId,
-  detectSourceType,
-  mediaBadges,
-  sourceMime,
-  type AdaptivePlayer,
-  type AdaptiveTrack,
-  type AudioOption,
-  type QualityOption,
-  type ShakaNamespace,
-  type TextOption,
-} from "./player/core/adaptive";
 import type {
   VelaCaptionStyle,
   VelaChapter,
@@ -38,10 +25,11 @@ import {
   DEFAULT_THEME,
 } from "./player/core/playerStyle";
 import { clamp } from "./player/core/utils";
-import { PlayerSurfaceChrome, type PlayerLoadStatus } from "./player/PlayerSurfaceChrome";
+import { PlayerSurfaceChrome } from "./player/PlayerSurfaceChrome";
 import { SettingsMenu } from "./player/SettingsMenu";
 import { Timeline } from "./player/Timeline";
 import { useControlVisibility } from "./player/useControlVisibility";
+import { usePlaybackEngine } from "./player/usePlaybackEngine";
 import { usePlayerGestures } from "./player/usePlayerGestures";
 
 const EMPTY_TEXT_TRACKS: VelaTextTrack[] = [];
@@ -71,15 +59,6 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
 ) {
   const shellRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const shakaRef = useRef<AdaptivePlayer | null>(null);
-  const onReadyRef = useRef(onReady);
-
-  useEffect(() => {
-    onReadyRef.current = onReady;
-  }, [onReady]);
-
-  const resolvedType = useMemo(() => detectSourceType(src, sourceType), [src, sourceType]);
-  const adaptive = resolvedType === "hls" || resolvedType === "dash";
   const mergedTheme = useMemo(
     () => ({ ...DEFAULT_THEME, ...theme, accent: accent ?? theme?.accent ?? DEFAULT_THEME.accent }),
     [accent, theme],
@@ -88,17 +67,6 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
     ...DEFAULT_CAPTION_STYLE,
     ...captionStyle,
   });
-
-  useEffect(() => {
-    setCaptionStyleState((current) => ({ ...current, ...captionStyle }));
-  }, [captionStyle]);
-
-  const normalizedTracks = useMemo<VelaTextTrack[]>(() => {
-    if (!captionsSrc) return textTracks;
-    if (textTracks.some((track) => track.src === captionsSrc)) return textTracks;
-    return [{ src: captionsSrc, language: "en", label: "English", kind: "subtitles" }, ...textTracks];
-  }, [captionsSrc, textTracks]);
-
   const [playing, setPlaying] = useState(false);
   const [started, setStarted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -109,22 +77,58 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
   const [speed, setSpeed] = useState(1);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [loop, setLoop] = useState(false);
-  const [qualities, setQualities] = useState<QualityOption[]>([]);
-  const [selectedQuality, setSelectedQuality] = useState<"auto" | number>("auto");
-  const [textOptions, setTextOptions] = useState<TextOption[]>([]);
-  const [selectedText, setSelectedText] = useState<"off" | string>("off");
-  const [audioOptions, setAudioOptions] = useState<AudioOption[]>([]);
-  const [selectedAudio, setSelectedAudio] = useState<string | null>(null);
-  const [status, setStatus] = useState<PlayerLoadStatus>("idle");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [resolvedChapters, setResolvedChapters] = useState<VelaChapter[]>(chapters);
-  const [isLive, setIsLive] = useState(false);
-  const [seekWindow, setSeekWindow] = useState({ start: 0, end: 0 });
-  const [liveLatencyMs, setLiveLatencyMs] = useState<number | null>(null);
-  const [badges, setBadges] = useState<string[]>([]);
+
+  useEffect(() => {
+    setCaptionStyleState((current) => ({ ...current, ...captionStyle }));
+  }, [captionStyle]);
+
+  const resetPlaybackUi = useCallback(() => {
+    setStarted(false);
+    setPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setBuffered(0);
+  }, []);
+
+  const markAutoPlayStart = useCallback(() => setStarted(true), []);
+
+  const {
+    adaptivePlayerRef,
+    resolvedType,
+    adaptive,
+    normalizedTracks,
+    status,
+    errorMessage,
+    qualities,
+    selectedQuality,
+    textOptions,
+    selectedText,
+    audioOptions,
+    selectedAudio,
+    badges,
+    resolvedChapters,
+    isLive,
+    seekWindow,
+    liveLatencyMs,
+    selectQuality,
+    selectTextTrack,
+    selectAudioTrack,
+    refreshLiveInfo,
+  } = usePlaybackEngine({
+    videoRef,
+    src,
+    sourceType,
+    captionsSrc,
+    textTracks,
+    chapters,
+    chapterLanguage,
+    autoPlay,
+    onReady,
+    onReset: resetPlaybackUi,
+    onAutoPlayStart: markAutoPlayStart,
+  });
 
   const { controlsVisible, showControls, hideControls } = useControlVisibility({ playing, settingsOpen });
-
   const timelineStart = isLive ? seekWindow.start : 0;
   const timelineEnd = isLive ? seekWindow.end : duration;
   const timelineSpan = Math.max(timelineEnd - timelineStart, 0);
@@ -179,210 +183,6 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
     onStateChange?.(getState());
   }, [getState, onStateChange]);
 
-  const refreshAdaptiveTracks = useCallback((player: AdaptivePlayer) => {
-    const variants = player.getVariantTracks();
-    const activeVariant = variants.find((track) => track.active);
-    const activeLanguage = activeVariant?.audioLanguage ?? activeVariant?.language;
-
-    const byHeight = new Map<number, AdaptiveTrack>();
-    for (const track of variants) {
-      const language = track.audioLanguage ?? track.language;
-      if (!track.height || (activeLanguage && language !== activeLanguage)) continue;
-      const previous = byHeight.get(track.height);
-      if (!previous || track.bandwidth > previous.bandwidth) byHeight.set(track.height, track);
-    }
-
-    setQualities(
-      Array.from(byHeight.entries())
-        .map(([height, track]) => ({ height, bandwidth: track.bandwidth, track }))
-        .sort((a, b) => b.height - a.height),
-    );
-
-    setTextOptions(player.getTextTracks().map((track) => ({
-      id: String(track.id),
-      label: track.label || track.language || `Track ${track.id}`,
-      language: track.language,
-      track,
-    })));
-
-    const audioTracks = player.getAudioTracks();
-    const audio = audioTracks.map((track, index) => ({
-      id: audioId(track, index),
-      label: track.label || track.language.toUpperCase() || `Audio ${index + 1}`,
-      language: track.language,
-      detail: audioDetail(track),
-      track,
-    }));
-    setAudioOptions(audio);
-    setSelectedAudio(audio.find((option) => option.track.active)?.id ?? audio[0]?.id ?? null);
-
-    const activeAudio = audioTracks.find((track) => track.active) ?? audioTracks[0];
-    setBadges(mediaBadges(activeVariant, activeAudio));
-  }, []);
-
-  const refreshLiveInfo = useCallback(() => {
-    const player = shakaRef.current;
-    if (!player || !player.isLive()) return;
-    setSeekWindow(player.seekRange());
-    setLiveLatencyMs(player.getLiveLatency());
-  }, []);
-
-  useEffect(() => {
-    const currentMedia = videoRef.current;
-    if (!currentMedia) return;
-    const media: HTMLVideoElement = currentMedia;
-    let disposed = false;
-    let instance: AdaptivePlayer | null = null;
-
-    setStatus("loading");
-    setErrorMessage(null);
-    setSelectedQuality("auto");
-    setSelectedText("off");
-    setSelectedAudio(null);
-    setQualities([]);
-    setTextOptions([]);
-    setAudioOptions([]);
-    setBadges([]);
-    setStarted(false);
-    setPlaying(false);
-    setCurrentTime(0);
-    setDuration(0);
-    setBuffered(0);
-    setIsLive(false);
-    setSeekWindow({ start: 0, end: 0 });
-    setLiveLatencyMs(null);
-    setResolvedChapters(chapters);
-
-    const listen = (type: string, listener: EventListener) => {
-      instance?.addEventListener(type, listener);
-    };
-
-    const onEngineError: EventListener = () => {
-      if (!disposed) {
-        setStatus("error");
-        setErrorMessage("The adaptive stream could not be loaded.");
-      }
-    };
-
-    async function load() {
-      try {
-        if (adaptive) {
-          media.removeAttribute("src");
-          media.load();
-
-          const module = await import("shaka-player");
-          const candidate = module as unknown as { default?: ShakaNamespace };
-          const shaka = candidate.default ?? (module as unknown as ShakaNamespace);
-          shaka.polyfill.installAll();
-
-          if (shaka.Player.isBrowserSupported && !shaka.Player.isBrowserSupported()) {
-            throw new Error("Adaptive playback is not supported in this browser.");
-          }
-
-          instance = new shaka.Player();
-          shakaRef.current = instance;
-          listen("error", onEngineError);
-          listen("trackschanged", () => {
-            if (instance && !disposed) refreshAdaptiveTracks(instance);
-          });
-          listen("variantchanged", () => {
-            if (instance && !disposed) refreshAdaptiveTracks(instance);
-          });
-          listen("audiotrackchanged", () => {
-            if (instance && !disposed) refreshAdaptiveTracks(instance);
-          });
-          listen("manifestupdated", () => {
-            if (!disposed) refreshLiveInfo();
-          });
-
-          instance.configure({ abr: { enabled: true } });
-          await instance.attach(media);
-          await instance.load(src, undefined, sourceMime(resolvedType));
-
-          for (const track of normalizedTracks) {
-            await instance.addTextTrackAsync(
-              track.src,
-              track.language,
-              track.kind ?? "subtitles",
-              track.mimeType ?? "text/vtt",
-            );
-          }
-
-          if (disposed) return;
-          refreshAdaptiveTracks(instance);
-
-          const live = instance.isLive();
-          setIsLive(live);
-          if (live) {
-            setSeekWindow(instance.seekRange());
-            setLiveLatencyMs(instance.getLiveLatency());
-          }
-
-          if (!chapters.length) {
-            const tracks = instance.getChaptersTracks();
-            const language = tracks.find((track) => track.language === chapterLanguage)?.language
-              ?? tracks[0]?.language;
-            if (language) {
-              const manifestChapters = await instance.getChaptersAsync(language);
-              if (!disposed) {
-                setResolvedChapters(manifestChapters.map((chapter) => ({
-                  id: chapter.id,
-                  title: chapter.title,
-                  start: chapter.startTime,
-                  end: chapter.endTime,
-                })));
-              }
-            }
-          }
-        } else {
-          shakaRef.current = null;
-          media.src = src;
-          media.load();
-          setTextOptions(normalizedTracks.map((track, nativeIndex) => ({
-            id: `native-${nativeIndex}`,
-            label: track.label,
-            language: track.language,
-            nativeIndex,
-          })));
-        }
-
-        if (disposed) return;
-        setStatus("ready");
-        onReadyRef.current?.();
-
-        if (autoPlay) {
-          setStarted(true);
-          await media.play();
-        }
-      } catch (error) {
-        if (disposed) return;
-        setStatus("error");
-        setErrorMessage(error instanceof Error ? error.message : "Vela could not load this source.");
-      }
-    }
-
-    void load();
-
-    return () => {
-      disposed = true;
-      shakaRef.current = null;
-      if (instance) void instance.destroy();
-      media.pause();
-      media.removeAttribute("src");
-      media.load();
-    };
-  }, [
-    adaptive,
-    autoPlay,
-    chapterLanguage,
-    chapters,
-    normalizedTracks,
-    refreshAdaptiveTracks,
-    refreshLiveInfo,
-    resolvedType,
-    src,
-  ]);
-
   useEffect(() => {
     const video = videoRef.current;
     if (video) video.loop = loop && !isLive;
@@ -402,14 +202,14 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
   const seekTo = useCallback((time: number) => {
     const video = videoRef.current;
     if (!video) return;
-    const player = shakaRef.current;
+    const player = adaptivePlayerRef.current;
     if (player?.isLive()) {
       const range = player.seekRange();
       video.currentTime = clamp(time, range.start, range.end);
     } else {
       video.currentTime = clamp(time, 0, video.duration || 0);
     }
-  }, []);
+  }, [adaptivePlayerRef]);
 
   const seekBy = useCallback((amount: number) => {
     const video = videoRef.current;
@@ -433,60 +233,6 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
     setMuted(video.muted);
   }, []);
 
-  const selectQuality = useCallback((quality: "auto" | number) => {
-    const player = shakaRef.current;
-    if (!player) return;
-
-    if (quality === "auto") {
-      player.configure({ abr: { enabled: true } });
-      setSelectedQuality("auto");
-      return;
-    }
-
-    const option = qualities.find((item) => item.height === quality);
-    if (!option) return;
-    player.configure({ abr: { enabled: false } });
-    player.selectVariantTrack(option.track, true);
-    setSelectedQuality(quality);
-  }, [qualities]);
-
-  const selectTextTrack = useCallback((id: "off" | string) => {
-    const video = videoRef.current;
-    const player = shakaRef.current;
-    if (!video) return;
-
-    if (id === "off") {
-      if (player) player.selectTextTrack(null);
-      for (let index = 0; index < video.textTracks.length; index += 1) {
-        video.textTracks[index].mode = "disabled";
-      }
-      setSelectedText("off");
-      return;
-    }
-
-    const option = textOptions.find((item) => item.id === id);
-    if (!option) return;
-
-    if (player && option.track) {
-      player.selectTextTrack(option.track);
-    } else if (option.nativeIndex !== undefined) {
-      for (let index = 0; index < video.textTracks.length; index += 1) {
-        video.textTracks[index].mode = index === option.nativeIndex ? "showing" : "disabled";
-      }
-    }
-
-    setSelectedText(id);
-  }, [textOptions]);
-
-  const selectAudioTrack = useCallback((id: string) => {
-    const player = shakaRef.current;
-    const option = audioOptions.find((item) => item.id === id);
-    if (!player || !option) return;
-    player.selectAudioTrack(option.track);
-    setSelectedAudio(id);
-    window.setTimeout(() => refreshAdaptiveTracks(player), 0);
-  }, [audioOptions, refreshAdaptiveTracks]);
-
   const setCaptionStyle = useCallback((patch: Partial<VelaCaptionStyle>) => {
     setCaptionStyleState((current) => ({ ...current, ...patch }));
   }, []);
@@ -501,11 +247,11 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
   }, [selectTextTrack, selectedText, textOptions]);
 
   const goLive = useCallback(() => {
-    const player = shakaRef.current;
+    const player = adaptivePlayerRef.current;
     if (!player?.isLive()) return;
     const range = player.seekRange();
     seekTo(Math.max(range.start, range.end - 0.35));
-  }, [seekTo]);
+  }, [adaptivePlayerRef, seekTo]);
 
   const jumpChapter = useCallback((direction: 1 | -1) => {
     if (!resolvedChapters.length) return;
@@ -612,11 +358,7 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
 
   const updateRuntime = (video: HTMLVideoElement) => {
     setCurrentTime(video.currentTime);
-    const player = shakaRef.current;
-    if (player?.isLive()) {
-      setSeekWindow(player.seekRange());
-      setLiveLatencyMs(player.getLiveLatency());
-    }
+    refreshLiveInfo();
   };
 
   const updateBuffered = () => {

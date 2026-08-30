@@ -1,5 +1,7 @@
 export type VelaSourceType = "auto" | "hls" | "dash" | "mp4";
 
+export type PlayerLoadStatus = "idle" | "loading" | "ready" | "error";
+
 export type VelaTextTrack = {
   src: string;
   language: string;

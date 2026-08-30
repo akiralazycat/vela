@@ -1,9 +1,7 @@
 "use client";
 
-import type { VelaSourceType } from "./core/contracts";
+import type { PlayerLoadStatus, VelaSourceType } from "./core/contracts";
 import { formatTime } from "./core/utils";
-
-export type PlayerLoadStatus = "idle" | "loading" | "ready" | "error";
 
 type PlayerSurfaceChromeProps = {
   resolvedType: Exclude<VelaSourceType, "auto">;
