@@ -1,0 +1,18 @@
+/*
+ * Vela React presentation compatibility boundary.
+ *
+ * The component migration is complete; these legacy visual shards now exist only
+ * to preserve the proven cascade while the stylesheet is consolidated by
+ * component. Keep this import order stable during visual QA. New presentation
+ * work should target React-owned selectors rather than add another phase file.
+ */
+@import "./player-shell-v1.css";
+@import "./settings-layer-v1.css";
+@import "./timeline-preview-v1.css";
+@import "./mobile-touch-v1.css";
+@import "./display-modes-v1.css";
+@import "./playback-signals-v1.css";
+@import "./audio-ux-v1.css";
+@import "./live-ux-v1.css";
+@import "./timeline-react-v1.css";
+@import "./subtitle-ux-v1.css";

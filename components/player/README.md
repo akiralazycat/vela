@@ -1,36 +1,37 @@
-# Vela player presentation split
+# Vela player architecture
 
-`components/VelaPlayer.tsx` is the public facade. Playback behavior remains isolated in `components/VelaPlayerCore.tsx` while presentation concerns live in small React components under this directory.
+`components/VelaPlayer.tsx` is the public facade. `components/VelaPlayerCore.tsx` now coordinates playback state and Shaka lifecycle while presentation and reusable core contracts live below `components/player`.
 
-## Current boundary
+## Presentation ownership
 
-- `PlayerFrame.tsx` owns the display preset boundary (`default` / `minimal`) and mounts the contextual playback signal surface.
+- `PlayerFrame.tsx` owns the display preset boundary (`default` / `minimal`) and mounts contextual playback signals.
 - `PlayerModeSwitch.tsx` owns the optional demo/editor switch.
-- `PlayerPresentationContext.tsx` carries current playback state and presentation mode without prop drilling.
+- `PlayerPresentationContext.tsx` carries current playback state and presentation mode without importing the playback implementation.
 - `Timeline.tsx` owns seek geometry, chapter markers, DVR window context, pointer/touch scrubbing state, and the range input.
 - `TimelinePreview.tsx` owns thumbnail VTT loading, sprite resolution, edge clamping, chapter-aware preview content, and live DVR preview labels.
-- `ControlDock.tsx` owns transport chrome: play, volume, time/live affordance, captions, loop, and the settings trigger. Caption toggle status and the compact language tag are React-owned here.
-- `ActionDock.tsx` owns PiP and fullscreen actions while deliberately rendering without an extra DOM wrapper so the established top-right glass geometry remains stable.
-- `SettingsMenu.tsx` owns progressive disclosure (`Quality` / `Speed` / `More settings`), nested settings navigation, loop access, and the settings-section presentation contract.
-- `AudioSettings.tsx` owns multilingual audio labeling, language/mix/role metadata, track summary, selection state, and the audio-switch confirmation surface.
-- `SubtitleSettings.tsx` owns subtitle language naming, type metadata (`Subtitles` / `CC` / `SDH` / `Forced` when inferable), track summary, active-track presentation, and language-switch confirmation.
-- `AccessibilitySettings.tsx` owns caption preview, Default / Contrast / Large presets, and size / edge / background controls.
-- `LiveStatus.tsx` owns live-edge / behind-edge labeling, Go Live semantics, accessible status text, and the return-to-live confirmation surface.
-- `PlaybackSignals.tsx` owns contextual live / quality / audio / chapter / media signals, actual decoded-height tracking, and the quick Audio / Return-to-Live affordances.
-- `VelaPlayerCore.tsx` owns Shaka integration, playback state, gestures, and imperative API behavior, but no longer owns the extracted presentation surfaces above.
+- `ControlDock.tsx` owns transport chrome: play, volume, time/live affordance, captions, loop, and the settings trigger.
+- `ActionDock.tsx` owns PiP and fullscreen actions.
+- `SettingsMenu.tsx` owns progressive disclosure and nested settings navigation.
+- `AudioSettings.tsx`, `SubtitleSettings.tsx`, and `AccessibilitySettings.tsx` own their respective track and caption surfaces.
+- `LiveStatus.tsx` owns live-edge / behind-edge labeling, Go Live semantics, and return-to-live confirmation.
+- `PlaybackSignals.tsx` owns contextual live / quality / audio / chapter / media signals and quick Audio / Return-to-Live affordances.
+- `PlayerSurfaceChrome.tsx` owns the non-transport overlays: engine/media fallback badges, poster action, error surface, title, vignette, and gesture hint.
+
+## Playback core
+
+`VelaPlayerCore.tsx` is intentionally a coordinator rather than the type/style/gesture monolith it was before.
+
+- `core/contracts.ts` is the stable public player contract (`VelaPlayerProps`, handle, state, theme, captions, chapters).
+- `core/adaptive.ts` contains Shaka-facing structural types plus source detection, MIME selection, track identity/detail formatting, and media capability badges.
+- `core/playerStyle.ts` owns default theme/caption values and maps them to CSS custom properties.
+- `core/utils.ts` contains playback-agnostic time/clamp helpers.
+- `useControlVisibility.ts` owns control auto-hide timing.
+- `usePlayerGestures.ts` owns pointer/touch gesture interpretation and transient gesture feedback.
+
+The remaining responsibility inside `VelaPlayerCore.tsx` is playback lifecycle/state coordination: loading Shaka/native media, selecting tracks/quality, live seek state, imperative API commands, keyboard routing, and wiring those values into the extracted React surfaces.
 
 ## Presentation runtime
 
-The presentation migration is complete. `public/vela-timeline-preview.js`, `public/vela-settings-layer.js`, `public/vela-audio-ux.js`, `public/vela-subtitle-ux.js`, `public/vela-live-ux.js`, and `public/vela-playback-signals.js` have all been retired. `app/layout.tsx` no longer loads presentation scripts; timeline preview, settings, multilingual audio, subtitles/accessibility, live DVR, and playback intelligence are React-owned.
+The presentation migration is complete. `app/layout.tsx` loads no Vela presentation scripts and the former `public/vela-*-ux.js` / playback signal bridges are retired.
 
-The remaining CSS compatibility layers intentionally preserve the established selectors and visual geometry while component ownership is now explicit. They can be consolidated later without reintroducing DOM observers or runtime presentation scripts.
-
-## Migration order
-
-1. ~~`Timeline` + `TimelinePreview`~~
-2. ~~`ControlDock` + `ActionDock`~~
-3. ~~`SettingsMenu`~~
-4. ~~`AudioSettings`~~
-5. ~~`SubtitleSettings` + `AccessibilitySettings`~~
-6. ~~`LiveStatus` + DVR affordances~~
-7. ~~`PlaybackSignals` + remove presentation scripts from `app/layout.tsx`~~
+CSS now enters through `styles/player-presentation.css`. That file is a deliberate compatibility boundary: it preserves the proven cascade order of the older `*-v1.css` shards while `app/globals.css` has only the base player, presentation boundary, and site stylesheet imports. New styling should not add another phase stylesheet; the remaining shards can be folded into component-oriented CSS after visual regression QA.

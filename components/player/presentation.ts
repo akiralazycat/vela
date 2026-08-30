@@ -1,4 +1,4 @@
-import type { VelaPlayerState } from "../VelaPlayerCore";
+import type { VelaPlayerState } from "./core/contracts";
 
 export type VelaDisplayMode = "default" | "minimal";
 

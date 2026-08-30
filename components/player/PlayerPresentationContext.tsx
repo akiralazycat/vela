@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, type ReactNode, useContext } from "react";
-import type { VelaPlayerState } from "../VelaPlayerCore";
+import type { VelaPlayerState } from "./core/contracts";
 import type { VelaDisplayMode } from "./presentation";
 
 type PlayerPresentationContextValue = {

@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import type { VelaPlayerState } from "../VelaPlayerCore";
+import type { VelaPlayerState } from "./core/contracts";
 
 type PlaybackSignalsProps = {
   frameRef: RefObject<HTMLDivElement | null>;

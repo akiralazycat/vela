@@ -1,17 +1,17 @@
 "use client";
 
 import { forwardRef, useCallback, useState } from "react";
-import {
-  VelaPlayer as VelaPlayerCore,
-  type VelaCaptionStyle,
-  type VelaChapter,
-  type VelaPlayerHandle,
-  type VelaPlayerProps as VelaPlayerCoreProps,
-  type VelaPlayerState,
-  type VelaSourceType,
-  type VelaTextTrack,
-  type VelaTheme,
-} from "./VelaPlayerCore";
+import { VelaPlayerCore } from "./VelaPlayerCore";
+import type {
+  VelaCaptionStyle,
+  VelaChapter,
+  VelaPlayerHandle,
+  VelaPlayerProps as VelaPlayerCoreProps,
+  VelaPlayerState,
+  VelaSourceType,
+  VelaTextTrack,
+  VelaTheme,
+} from "./player/core/contracts";
 import { PlayerFrame } from "./player/PlayerFrame";
 import type { VelaDisplayMode } from "./player/presentation";
 

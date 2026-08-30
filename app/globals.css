@@ -1,14 +1,5 @@
 @import "../styles/player.css";
-@import "../styles/player-shell-v1.css";
-@import "../styles/settings-layer-v1.css";
-@import "../styles/timeline-preview-v1.css";
-@import "../styles/mobile-touch-v1.css";
-@import "../styles/display-modes-v1.css";
-@import "../styles/playback-signals-v1.css";
-@import "../styles/audio-ux-v1.css";
-@import "../styles/live-ux-v1.css";
-@import "../styles/timeline-react-v1.css";
-@import "../styles/subtitle-ux-v1.css";
+@import "../styles/player-presentation.css";
 @import "../styles/site.css";
 
 :root {

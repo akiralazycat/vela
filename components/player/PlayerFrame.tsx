@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode, useRef } from "react";
-import type { VelaPlayerState } from "../VelaPlayerCore";
+import type { VelaPlayerState } from "./core/contracts";
 import { PlaybackSignals } from "./PlaybackSignals";
 import { PlayerModeSwitch } from "./PlayerModeSwitch";
 import { PlayerPresentationProvider } from "./PlayerPresentationContext";
