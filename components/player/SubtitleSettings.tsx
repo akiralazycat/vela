@@ -139,8 +139,6 @@ export function SubtitleSettings({ options, selectedText, style, onSelect }: Sub
     const willBeActive = id !== "off";
     onSelect(id);
 
-    // On/off confirmation is owned by the always-mounted control dock. Keep
-    // language-to-language changes here so settings switching still confirms.
     if (!(wasActive && willBeActive)) return;
     const option = options.find((item) => item.id === id);
     const presentation = describeSubtitleOption(option);
@@ -171,6 +169,7 @@ export function SubtitleSettings({ options, selectedText, style, onSelect }: Sub
           data-vela-subtitle-label="Off"
           data-vela-subtitle-state="off"
           aria-label="Turn subtitles off"
+          aria-pressed={selectedText === "off"}
           onClick={() => select("off")}
         >
           Off
@@ -189,6 +188,7 @@ export function SubtitleSettings({ options, selectedText, style, onSelect }: Sub
               data-vela-subtitle-label={label}
               data-vela-subtitle-state="on"
               aria-label={[label, ...meta.map((item) => item.text)].join(", ")}
+              aria-pressed={selectedText === option.id}
               onClick={() => select(option.id)}
             >
               {option.label}

@@ -80,14 +80,21 @@ function NavRow({
   value,
   onClick,
   arrow = true,
+  pressed,
 }: {
   label: string;
   value?: string;
   onClick: () => void;
   arrow?: boolean;
+  pressed?: boolean;
 }) {
   return (
-    <button className={`vela-settings-nav-row ${arrow ? "" : "vela-settings-nav-action"}`} type="button" onClick={onClick}>
+    <button
+      className={`vela-settings-nav-row ${arrow ? "" : "vela-settings-nav-action"}`}
+      type="button"
+      aria-pressed={pressed}
+      onClick={onClick}
+    >
       <span className="vela-settings-nav-label">{label}</span>
       {arrow ? (
         <span className="vela-settings-nav-trailing">
@@ -198,7 +205,7 @@ function SettingsMenuImpl({
               {textOptions.length ? <NavRow label="Subtitles" value={subtitleValue} onClick={() => setView("subtitles")} /> : null}
               {chapters.length ? <NavRow label="Chapters" value={selectedChapter?.title} onClick={() => setView("chapters")} /> : null}
               {textOptions.length ? <NavRow label="Accessibility" value={accessibilityValue} onClick={() => setView("accessibility")} /> : null}
-              {!isLive ? <NavRow label="Loop" value={loop ? "On" : "Off"} arrow={false} onClick={onToggleLoop} /> : null}
+              {!isLive ? <NavRow label="Loop" value={loop ? "On" : "Off"} arrow={false} pressed={loop} onClick={onToggleLoop} /> : null}
               <NavRow label="Controls" value="Shortcuts" onClick={() => setView("controls")} />
             </div>
           </>
@@ -219,9 +226,22 @@ function SettingsMenuImpl({
       {qualities.length ? (
         <section style={sectionStyle("quality")}>
           <span>QUALITY</span>
-          <button type="button" className={selectedQuality === "auto" ? "selected" : ""} onClick={() => onSelectQuality("auto")}>Auto <small>adaptive</small></button>
+          <button
+            type="button"
+            className={selectedQuality === "auto" ? "selected" : ""}
+            aria-pressed={selectedQuality === "auto"}
+            onClick={() => onSelectQuality("auto")}
+          >
+            Auto <small>adaptive</small>
+          </button>
           {qualities.map((option) => (
-            <button key={option.height} type="button" className={selectedQuality === option.height ? "selected" : ""} onClick={() => onSelectQuality(option.height)}>
+            <button
+              key={option.height}
+              type="button"
+              className={selectedQuality === option.height ? "selected" : ""}
+              aria-pressed={selectedQuality === option.height}
+              onClick={() => onSelectQuality(option.height)}
+            >
               {option.height}p <small>{(option.bandwidth / 1_000_000).toFixed(1)} Mbps</small>
             </button>
           ))}
@@ -233,7 +253,15 @@ function SettingsMenuImpl({
           <span>SPEED</span>
           <div className="vela-speed-grid">
             {SPEEDS.map((value) => (
-              <button key={value} type="button" className={speed === value ? "selected" : ""} onClick={() => onSpeedChange(value)}>{value}×</button>
+              <button
+                key={value}
+                type="button"
+                className={speed === value ? "selected" : ""}
+                aria-pressed={speed === value}
+                onClick={() => onSpeedChange(value)}
+              >
+                {value}×
+              </button>
             ))}
           </div>
         </section>
@@ -264,6 +292,7 @@ function SettingsMenuImpl({
               key={chapter.id ?? `${chapter.start}-${chapter.title}`}
               type="button"
               className={currentChapterStart === chapter.start ? "selected" : ""}
+              aria-current={currentChapterStart === chapter.start ? "true" : undefined}
               onClick={() => onSeekChapter(chapter.start)}
             >
               {chapter.title}<small>{formatTime(chapter.start)} · {String(index + 1).padStart(2, "0")}</small>

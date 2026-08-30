@@ -177,6 +177,7 @@ export function AudioSettings({ options, selectedAudio, style, onSelect }: Audio
               data-vela-audio-option="true"
               data-vela-audio-label={label}
               aria-label={[label, ...meta.map((item) => item.text)].filter(Boolean).join(", ")}
+              aria-pressed={selectedAudio === option.id}
               onClick={() => select(option)}
             >
               {option.label}
