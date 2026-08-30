@@ -16,3 +16,10 @@
 @import "./live-status.css";
 @import "./timeline-live.css";
 @import "./subtitle-accessibility.css";
+
+/* Radius 0 is an explicit public theme value, not a sentinel. The historical
+   shell shim rounded legacy 0 values; the release contract restores true zero
+   while the React default theme now supplies the intended 24px radius. */
+.vela-player[style*="--vela-radius: 0px"] {
+  border-radius: 0;
+}

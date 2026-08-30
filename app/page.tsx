@@ -11,7 +11,7 @@ export default function Home() {
           <span className="wordmark-mark" aria-hidden="true">◒</span>
           VELA
         </a>
-        <span className="build-label">PLAYER / PROTOTYPE 03</span>
+        <span className="build-label">PLAYER / 0.3</span>
       </header>
 
       <section className="hero hero-v3" id="top">
@@ -94,7 +94,7 @@ Swipe       Seek up to ±30s`}</code></pre>
 import { VelaPlayer } from "@vela/player/react";`}</code></pre>
       </section>
 
-      <section className="spec-strip" aria-label="Prototype features">
+      <section className="spec-strip" aria-label="Player features">
         <span>MULTI-AUDIO</span>
         <span>HDR / DOLBY SIGNALS</span>
         <span>LIVE DVR</span>

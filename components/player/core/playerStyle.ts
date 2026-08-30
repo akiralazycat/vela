@@ -6,7 +6,7 @@ export const DEFAULT_THEME: VelaTheme = {
   surface: "#080908",
   foreground: "#ffffff",
   muted: "#a5a79f",
-  radius: 0,
+  radius: 24,
   blur: 18,
   controlsOpacity: 0.76,
 };

@@ -44,7 +44,7 @@ const initialTheme: VelaTheme = {
   surface: "#080908",
   foreground: "#ffffff",
   muted: "#a5a79f",
-  radius: 0,
+  radius: 24,
   blur: 18,
   controlsOpacity: 0.76,
 };
@@ -63,7 +63,7 @@ export function VelaStudio() {
   const [displayMode, setDisplayMode] = useState<VelaDisplayMode>("default");
   const [theme, setTheme] = useState(initialTheme);
   const [captionStyle, setCaptionStyle] = useState(initialCaptionStyle);
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const source = sources[mode];
 
   const config = useMemo(() => JSON.stringify({
@@ -86,9 +86,14 @@ export function VelaStudio() {
   }
 
   const copyConfig = async () => {
-    await navigator.clipboard?.writeText(config);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1200);
+    try {
+      if (!navigator.clipboard) throw new Error("Clipboard API unavailable");
+      await navigator.clipboard.writeText(config);
+      setCopyState("copied");
+    } catch {
+      setCopyState("error");
+    }
+    window.setTimeout(() => setCopyState("idle"), 1400);
   };
 
   return (
@@ -133,7 +138,9 @@ export function VelaStudio() {
             <p className="eyebrow">Theme + caption builder</p>
             <h2>Design the entire surface.</h2>
           </div>
-          <button type="button" className="copy-config" onClick={() => void copyConfig()}>{copied ? "COPIED" : "COPY CONFIG"}</button>
+          <button type="button" className="copy-config" onClick={() => void copyConfig()}>
+            {copyState === "copied" ? "COPIED" : copyState === "error" ? "COPY FAILED" : "COPY CONFIG"}
+          </button>
         </div>
 
         <div className="theme-controls">
