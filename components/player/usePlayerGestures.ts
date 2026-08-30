@@ -45,23 +45,30 @@ export function usePlayerGestures({
   }, []);
 
   const handlePointerDown = useCallback((event: ReactPointerEvent<HTMLVideoElement>) => {
-    if (!enabled) return;
+    if (!enabled || !event.isPrimary) return;
     gestureRef.current = { x: event.clientX, y: event.clientY, at: performance.now() };
   }, [enabled]);
 
-  const handlePointerUp = useCallback((event: ReactPointerEvent<HTMLVideoElement>) => {
-    const start = gestureRef.current;
+  const handlePointerCancel = useCallback((event: ReactPointerEvent<HTMLVideoElement>) => {
+    if (!event.isPrimary) return;
     gestureRef.current = null;
-    if (!start) {
-      if (event.pointerType === "mouse") void onTogglePlay();
+  }, []);
+
+  const handlePointerUp = useCallback((event: ReactPointerEvent<HTMLVideoElement>) => {
+    if (!enabled || !event.isPrimary) {
+      gestureRef.current = null;
       return;
     }
+
+    const start = gestureRef.current;
+    gestureRef.current = null;
+    if (!start) return;
 
     const dx = event.clientX - start.x;
     const dy = event.clientY - start.y;
     const elapsed = performance.now() - start.at;
 
-    if (event.pointerType === "touch" && Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+    if ((event.pointerType === "touch" || event.pointerType === "pen") && Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.2) {
       const amount = clamp(Math.round(dx / 7), -30, 30);
       onSeekBy(amount);
       flashGesture(`${amount > 0 ? "+" : ""}${amount}s`);
@@ -98,7 +105,7 @@ export function usePlayerGestures({
 
     lastTapRef.current = { zone, at: now };
     onShowControls();
-  }, [flashGesture, onSeekBy, onShowControls, onTogglePlay, playing, shellRef]);
+  }, [enabled, flashGesture, onSeekBy, onShowControls, onTogglePlay, playing, shellRef]);
 
-  return { gestureHint, handlePointerDown, handlePointerUp };
+  return { gestureHint, handlePointerDown, handlePointerUp, handlePointerCancel };
 }

@@ -204,7 +204,7 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
     setCaptionStyle,
   });
 
-  const { gestureHint, handlePointerDown, handlePointerUp } = usePlayerGestures({
+  const { gestureHint, handlePointerDown, handlePointerUp, handlePointerCancel } = usePlayerGestures({
     enabled: gestures,
     shellRef,
     playing,
@@ -235,6 +235,7 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
         crossOrigin={adaptive ? "anonymous" : undefined}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
         onPlay={handlePlay}
         onPause={handlePause}
         onEnded={handlePause}
