@@ -132,6 +132,8 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
     handleDurationChange,
     handleTimeUpdate,
     handleProgress,
+    handleVolumeChange,
+    handleRateChange,
   } = useMediaControls({
     videoRef,
     adaptivePlayerRef,
@@ -240,6 +242,8 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
         onDurationChange={(event) => handleDurationChange(event.currentTarget)}
         onTimeUpdate={(event) => handleTimeUpdate(event.currentTarget)}
         onProgress={handleProgress}
+        onVolumeChange={(event) => handleVolumeChange(event.currentTarget)}
+        onRateChange={(event) => handleRateChange(event.currentTarget)}
       >
         {!adaptive ? normalizedTracks.map((track) => (
           <track

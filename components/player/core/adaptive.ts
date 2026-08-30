@@ -51,14 +51,18 @@ export type AdaptivePlayer = {
   getAudioTracks: () => AdaptiveAudioTrack[];
   selectAudioTrack: (track: AdaptiveAudioTrack) => void;
   getTextTracks: () => AdaptiveTrack[];
-  selectTextTrack: (track: AdaptiveTrack | null) => void;
+  selectTextTrack: (track: AdaptiveTrack) => void;
+  setTextTrackVisibility: (visible: boolean) => void | Promise<void>;
+  isTextTrackVisible: () => boolean;
   addTextTrackAsync: (
     uri: string,
     language: string,
     kind?: string,
     mimeType?: string,
     codecs?: string,
-  ) => Promise<unknown>;
+    label?: string,
+    forced?: boolean,
+  ) => Promise<AdaptiveTrack>;
   getChaptersTracks: () => Array<{ language: string }>;
   getChaptersAsync: (language: string) => Promise<AdaptiveChapter[]>;
   isLive: () => boolean;

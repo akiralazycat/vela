@@ -4,6 +4,7 @@ import {
   type RefObject,
   useCallback,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import type { AdaptivePlayer } from "./core/adaptive";
@@ -38,6 +39,7 @@ export function useMediaControls({
   const [muted, setMuted] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [loop, setLoop] = useState(false);
+  const lastAudibleVolumeRef = useRef(initialVolume > 0 ? initialVolume : 0.82);
 
   useEffect(() => {
     setStarted(false);
@@ -55,7 +57,6 @@ export function useMediaControls({
   const play = useCallback(async () => {
     const video = videoRef.current;
     if (!video || status === "error") return;
-    setStarted(true);
     await video.play();
   }, [status, videoRef]);
 
@@ -91,6 +92,7 @@ export function useMediaControls({
     const video = videoRef.current;
     if (!video) return;
     const next = clamp(value, 0, 1);
+    if (next > 0) lastAudibleVolumeRef.current = next;
     video.volume = next;
     video.muted = next === 0;
     setVolumeState(next);
@@ -100,9 +102,22 @@ export function useMediaControls({
   const toggleMute = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
-    video.muted = !video.muted;
-    setMuted(video.muted);
-  }, [videoRef]);
+
+    if (video.muted || video.volume === 0) {
+      if (video.volume === 0) {
+        const restored = clamp(lastAudibleVolumeRef.current || initialVolume || 0.82, 0.01, 1);
+        video.volume = restored;
+        setVolumeState(restored);
+      }
+      video.muted = false;
+      setMuted(false);
+      return;
+    }
+
+    lastAudibleVolumeRef.current = video.volume;
+    video.muted = true;
+    setMuted(true);
+  }, [initialVolume, videoRef]);
 
   const setPlaybackRate = useCallback((value: number) => {
     const video = videoRef.current;
@@ -134,7 +149,10 @@ export function useMediaControls({
   const handleLoadedMetadata = useCallback((video: HTMLVideoElement) => {
     if (Number.isFinite(video.duration)) setDuration(video.duration);
     video.volume = volume;
-  }, [volume]);
+    video.muted = muted;
+    video.playbackRate = speed;
+    video.loop = loop && !isLive;
+  }, [isLive, loop, muted, speed, volume]);
 
   const handleDurationChange = useCallback((video: HTMLVideoElement) => {
     if (Number.isFinite(video.duration)) setDuration(video.duration);
@@ -147,9 +165,22 @@ export function useMediaControls({
 
   const handleProgress = useCallback(() => {
     const video = videoRef.current;
-    if (!video || !video.buffered.length) return;
+    if (!video || !video.buffered.length) {
+      setBuffered(0);
+      return;
+    }
     setBuffered(video.buffered.end(video.buffered.length - 1));
   }, [videoRef]);
+
+  const handleVolumeChange = useCallback((video: HTMLVideoElement) => {
+    setVolumeState(video.volume);
+    setMuted(video.muted || video.volume === 0);
+    if (video.volume > 0) lastAudibleVolumeRef.current = video.volume;
+  }, []);
+
+  const handleRateChange = useCallback((video: HTMLVideoElement) => {
+    setSpeed(video.playbackRate);
+  }, []);
 
   return {
     playing,
@@ -177,5 +208,7 @@ export function useMediaControls({
     handleDurationChange,
     handleTimeUpdate,
     handleProgress,
+    handleVolumeChange,
+    handleRateChange,
   };
 }

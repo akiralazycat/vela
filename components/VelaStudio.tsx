@@ -21,6 +21,11 @@ const sources = {
     type: "hls" as const,
     title: "Angel One / HLS",
   },
+  mp4: {
+    src: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    type: "mp4" as const,
+    title: "Flower / MP4",
+  },
   live: {
     src: "https://storage.googleapis.com/shaka-live-assets/player-source.mpd",
     type: "dash" as const,
@@ -65,17 +70,19 @@ export function VelaStudio() {
   const [captionStyle, setCaptionStyle] = useState(initialCaptionStyle);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const source = sources[mode];
+  const hasDemoTimelinePreview = mode === "dash" || mode === "hls";
+  const hasDemoMetadata = mode !== "live";
 
   const config = useMemo(() => JSON.stringify({
     src: source.src,
     sourceType: source.type,
     displayMode,
-    thumbnailVtt: mode === "live" ? undefined : "/demo-thumbnails.vtt",
-    textTracks: mode === "live" ? [] : extraTracks,
-    chapters: mode === "live" ? [] : demoChapters,
+    thumbnailVtt: hasDemoTimelinePreview ? "/demo-thumbnails.vtt" : undefined,
+    textTracks: hasDemoMetadata ? extraTracks : [],
+    chapters: hasDemoMetadata ? demoChapters : [],
     captionStyle,
     theme,
-  }, null, 2), [captionStyle, displayMode, mode, source, theme]);
+  }, null, 2), [captionStyle, displayMode, hasDemoMetadata, hasDemoTimelinePreview, source, theme]);
 
   function patchTheme<K extends keyof VelaTheme>(key: K, value: VelaTheme[K]) {
     setTheme((current) => ({ ...current, [key]: value }));
@@ -100,13 +107,13 @@ export function VelaStudio() {
     <div className="vela-studio">
       <div className="studio-toolbar">
         <div className="studio-protocol-switch" aria-label="Playback mode">
-          {(["dash", "hls", "live"] as const).map((item) => (
+          {(["dash", "hls", "mp4", "live"] as const).map((item) => (
             <button key={item} type="button" className={mode === item ? "is-active" : ""} onClick={() => setMode(item)}>
               {item.toUpperCase()}
             </button>
           ))}
         </div>
-        <span>AUDIO / CHAPTERS / LIVE DVR / HDR SIGNALS</span>
+        <span>VOD / NATIVE MP4 / LIVE DVR / TRACKS</span>
       </div>
 
       <VelaPlayer
@@ -116,9 +123,9 @@ export function VelaStudio() {
         src={source.src}
         sourceType={source.type}
         poster={mode === "live" ? undefined : "/vela-poster.svg"}
-        textTracks={mode === "live" ? undefined : extraTracks}
-        thumbnailVtt={mode === "live" ? undefined : "/demo-thumbnails.vtt"}
-        chapters={mode === "live" ? undefined : demoChapters}
+        textTracks={hasDemoMetadata ? extraTracks : undefined}
+        thumbnailVtt={hasDemoTimelinePreview ? "/demo-thumbnails.vtt" : undefined}
+        chapters={hasDemoMetadata ? demoChapters : undefined}
         captionStyle={captionStyle}
         theme={theme}
         displayMode={displayMode}
@@ -127,9 +134,9 @@ export function VelaStudio() {
       />
 
       <div className="stage-meta" aria-label="Demo details">
-        <span>MULTILINGUAL AUDIO</span>
+        <span>HLS / DASH / MP4</span>
         <span>CHAPTER + DVR TIMELINE</span>
-        <span>HDR / DOLBY METADATA</span>
+        <span>AUDIO / SUBTITLES / HDR</span>
       </div>
 
       <div className="theme-lab">

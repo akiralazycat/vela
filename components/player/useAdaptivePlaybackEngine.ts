@@ -18,6 +18,7 @@ import type { VelaChapter, VelaSourceType, VelaTextTrack } from "./core/contract
 export type AdaptiveTrackSnapshot = {
   qualities: QualityOption[];
   textOptions: TextOption[];
+  selectedText: "off" | string;
   audioOptions: AudioOption[];
   selectedAudio: string | null;
   badges: string[];
@@ -27,6 +28,12 @@ export type AdaptiveLiveSnapshot = {
   isLive: boolean;
   seekWindow: { start: number; end: number };
   liveLatencyMs: number | null;
+};
+
+type AdaptiveEngineError = {
+  severity?: number;
+  code?: number;
+  message?: string;
 };
 
 type LoadAdaptiveOptions = {
@@ -40,7 +47,7 @@ type LoadAdaptiveOptions = {
   onTracks: (snapshot: AdaptiveTrackSnapshot) => void;
   onLive: (snapshot: AdaptiveLiveSnapshot) => void;
   onChapters: (chapters: VelaChapter[]) => void;
-  onEngineError: () => void;
+  onEngineError: (error: AdaptiveEngineError | null) => void;
 };
 
 function collectTrackSnapshot(player: AdaptivePlayer): AdaptiveTrackSnapshot {
@@ -60,12 +67,15 @@ function collectTrackSnapshot(player: AdaptivePlayer): AdaptiveTrackSnapshot {
     .map(([height, track]) => ({ height, bandwidth: track.bandwidth, track }))
     .sort((a, b) => b.height - a.height);
 
-  const textOptions = player.getTextTracks().map((track) => ({
+  const textTracks = player.getTextTracks();
+  const textOptions = textTracks.map((track) => ({
     id: String(track.id),
     label: track.label || track.language || `Track ${track.id}`,
     language: track.language,
     track,
   }));
+  const activeText = textTracks.find((track) => track.active);
+  const selectedText = player.isTextTrackVisible() && activeText ? String(activeText.id) : "off";
 
   const audioTracks = player.getAudioTracks();
   const audioOptions = audioTracks.map((track, index) => ({
@@ -80,6 +90,7 @@ function collectTrackSnapshot(player: AdaptivePlayer): AdaptiveTrackSnapshot {
   return {
     qualities,
     textOptions,
+    selectedText,
     audioOptions,
     selectedAudio: audioOptions.find((option) => option.track.active)?.id ?? audioOptions[0]?.id ?? null,
     badges: mediaBadges(activeVariant, activeAudio),
@@ -152,12 +163,17 @@ export function useAdaptivePlaybackEngine() {
       if (active()) onLive(collectLiveSnapshot(instance));
     };
 
-    instance.addEventListener("error", () => {
-      if (active()) onEngineError();
-    });
+    instance.addEventListener("error", ((event: Event) => {
+      if (!active()) return;
+      const detail = (event as CustomEvent<AdaptiveEngineError>).detail ?? null;
+      if (detail?.severity === 1) return;
+      onEngineError(detail);
+    }) as EventListener);
     instance.addEventListener("trackschanged", emitTracks as EventListener);
     instance.addEventListener("variantchanged", emitTracks as EventListener);
     instance.addEventListener("audiotrackchanged", emitTracks as EventListener);
+    instance.addEventListener("textchanged", emitTracks as EventListener);
+    instance.addEventListener("texttrackvisibility", emitTracks as EventListener);
     instance.addEventListener("manifestupdated", emitLive as EventListener);
 
     try {
@@ -165,17 +181,25 @@ export function useAdaptivePlaybackEngine() {
       await instance.attach(media);
       await instance.load(src, undefined, sourceMime(resolvedType));
 
+      let defaultTextTrack: AdaptiveTrack | null = null;
       for (const track of textTracks) {
         if (signal.aborted) break;
-        await instance.addTextTrackAsync(
+        const addedTrack = await instance.addTextTrackAsync(
           track.src,
           track.language,
           track.kind ?? "subtitles",
           track.mimeType ?? "text/vtt",
+          undefined,
+          track.label,
         );
+        if (track.default && !defaultTextTrack) defaultTextTrack = addedTrack;
       }
 
       if (!active()) return;
+      if (defaultTextTrack) {
+        instance.selectTextTrack(defaultTextTrack);
+        await instance.setTextTrackVisibility(true);
+      }
       emitTracks();
       emitLive();
 

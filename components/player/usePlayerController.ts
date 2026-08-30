@@ -167,8 +167,12 @@ export function usePlayerController({
   const toggleFullscreen = useCallback(async () => {
     const shell = shellRef.current;
     if (!shell) return;
-    if (!document.fullscreenElement) await shell.requestFullscreen?.();
-    else await document.exitFullscreen?.();
+    try {
+      if (!document.fullscreenElement) await shell.requestFullscreen?.();
+      else await document.exitFullscreen?.();
+    } catch {
+      // Fullscreen can be unavailable on embedded/mobile browser surfaces.
+    }
   }, [shellRef]);
 
   const togglePip = useCallback(async () => {
@@ -220,9 +224,13 @@ export function usePlayerController({
     if (event.key === " " || key === "k") {
       event.preventDefault();
       void togglePlay();
-    } else if (event.key === "ArrowLeft") seekBy(-5);
-    else if (event.key === "ArrowRight") seekBy(5);
-    else if (event.key === "ArrowUp") {
+    } else if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      seekBy(-5);
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      seekBy(5);
+    } else if (event.key === "ArrowUp") {
       event.preventDefault();
       setVolume(volume + 0.05);
     } else if (event.key === "ArrowDown") {
@@ -234,9 +242,13 @@ export function usePlayerController({
     else if (key === "m") toggleMute();
     else if (key === "f") void toggleFullscreen();
     else if (key === "c") toggleCaptions();
-    else if (key === "home") seekTo(timelineStart);
-    else if (key === "end") isLive ? goLive() : seekTo(timelineEnd);
-    else if (event.key === ">") setPlaybackRate(Math.min(2, speed + 0.25));
+    else if (key === "home") {
+      event.preventDefault();
+      seekTo(timelineStart);
+    } else if (key === "end") {
+      event.preventDefault();
+      isLive ? goLive() : seekTo(timelineEnd);
+    } else if (event.key === ">") setPlaybackRate(Math.min(2, speed + 0.25));
     else if (event.key === "<") setPlaybackRate(Math.max(0.5, speed - 0.25));
   }, [
     goLive,
