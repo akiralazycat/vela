@@ -32,8 +32,6 @@ type UsePlaybackEngineOptions = {
   chapterLanguage: string;
   autoPlay: boolean;
   onReady?: () => void;
-  onReset?: () => void;
-  onAutoPlayStart?: () => void;
 };
 
 export function usePlaybackEngine({
@@ -46,10 +44,8 @@ export function usePlaybackEngine({
   chapterLanguage,
   autoPlay,
   onReady,
-  onReset,
-  onAutoPlayStart,
 }: UsePlaybackEngineOptions) {
-  const callbacksRef = useRef({ onReady, onReset, onAutoPlayStart });
+  const onReadyRef = useRef(onReady);
   const {
     playerRef,
     load: loadAdaptive,
@@ -65,6 +61,14 @@ export function usePlaybackEngine({
     if (textTracks.some((track) => track.src === captionsSrc)) return [...textTracks];
     return [{ src: captionsSrc, language: "en", label: "English", kind: "subtitles" }, ...textTracks];
   }, [captionsSrc, textTracks]);
+  const sessionKey = useMemo(() => [
+    resolvedType,
+    src,
+    chapterLanguage,
+    autoPlay ? "autoplay" : "manual",
+    normalizedTracks.map((track) => `${track.language}:${track.kind ?? "subtitles"}:${track.src}`).join("|"),
+    chapters.map((chapter) => `${chapter.id ?? ""}:${chapter.start}:${chapter.end ?? ""}:${chapter.title}`).join("|"),
+  ].join("::"), [autoPlay, chapterLanguage, chapters, normalizedTracks, resolvedType, src]);
 
   const [status, setStatus] = useState<PlayerLoadStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -81,8 +85,8 @@ export function usePlaybackEngine({
   const [liveLatencyMs, setLiveLatencyMs] = useState<number | null>(null);
 
   useEffect(() => {
-    callbacksRef.current = { onReady, onReset, onAutoPlayStart };
-  }, [onAutoPlayStart, onReady, onReset]);
+    onReadyRef.current = onReady;
+  }, [onReady]);
 
   const applyTrackSnapshot = useCallback((snapshot: AdaptiveTrackSnapshot) => {
     setQualities(snapshot.qualities);
@@ -121,7 +125,6 @@ export function usePlaybackEngine({
     const controller = new AbortController();
 
     resetEngineState();
-    callbacksRef.current.onReset?.();
 
     async function load() {
       try {
@@ -156,12 +159,9 @@ export function usePlaybackEngine({
 
         if (controller.signal.aborted) return;
         setStatus("ready");
-        callbacksRef.current.onReady?.();
+        onReadyRef.current?.();
 
-        if (autoPlay) {
-          callbacksRef.current.onAutoPlayStart?.();
-          await media.play();
-        }
+        if (autoPlay) await media.play();
       } catch (error) {
         if (controller.signal.aborted) return;
         setStatus("error");
@@ -256,6 +256,7 @@ export function usePlaybackEngine({
 
   return {
     adaptivePlayerRef: playerRef,
+    sessionKey,
     resolvedType,
     adaptive,
     normalizedTracks,

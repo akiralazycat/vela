@@ -29,6 +29,7 @@ import { PlayerSurfaceChrome } from "./player/PlayerSurfaceChrome";
 import { SettingsMenu } from "./player/SettingsMenu";
 import { Timeline } from "./player/Timeline";
 import { useControlVisibility } from "./player/useControlVisibility";
+import { useMediaControls } from "./player/useMediaControls";
 import { usePlaybackEngine } from "./player/usePlaybackEngine";
 import { usePlayerGestures } from "./player/usePlayerGestures";
 
@@ -67,33 +68,15 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
     ...DEFAULT_CAPTION_STYLE,
     ...captionStyle,
   });
-  const [playing, setPlaying] = useState(false);
-  const [started, setStarted] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [buffered, setBuffered] = useState(0);
-  const [volume, setVolumeState] = useState(0.82);
-  const [muted, setMuted] = useState(false);
-  const [speed, setSpeed] = useState(1);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [loop, setLoop] = useState(false);
 
   useEffect(() => {
     setCaptionStyleState((current) => ({ ...current, ...captionStyle }));
   }, [captionStyle]);
 
-  const resetPlaybackUi = useCallback(() => {
-    setStarted(false);
-    setPlaying(false);
-    setCurrentTime(0);
-    setDuration(0);
-    setBuffered(0);
-  }, []);
-
-  const markAutoPlayStart = useCallback(() => setStarted(true), []);
-
   const {
     adaptivePlayerRef,
+    sessionKey,
     resolvedType,
     adaptive,
     normalizedTracks,
@@ -124,8 +107,41 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
     chapterLanguage,
     autoPlay,
     onReady,
-    onReset: resetPlaybackUi,
-    onAutoPlayStart: markAutoPlayStart,
+  });
+
+  const {
+    playing,
+    started,
+    currentTime,
+    duration,
+    buffered,
+    volume,
+    muted,
+    speed,
+    loop,
+    play,
+    pause,
+    togglePlay,
+    seekTo,
+    seekBy,
+    setVolume,
+    toggleMute,
+    setPlaybackRate,
+    toggleLoop,
+    goLive,
+    handlePlay,
+    handlePause,
+    handleLoadedMetadata,
+    handleDurationChange,
+    handleTimeUpdate,
+    handleProgress,
+  } = useMediaControls({
+    videoRef,
+    adaptivePlayerRef,
+    isLive,
+    status,
+    refreshLiveInfo,
+    sessionKey,
   });
 
   const { controlsVisible, showControls, hideControls } = useControlVisibility({ playing, settingsOpen });
@@ -183,56 +199,6 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
     onStateChange?.(getState());
   }, [getState, onStateChange]);
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (video) video.loop = loop && !isLive;
-  }, [isLive, loop]);
-
-  const togglePlay = useCallback(async () => {
-    const video = videoRef.current;
-    if (!video || status === "error") return;
-    if (video.paused) {
-      setStarted(true);
-      await video.play();
-    } else {
-      video.pause();
-    }
-  }, [status]);
-
-  const seekTo = useCallback((time: number) => {
-    const video = videoRef.current;
-    if (!video) return;
-    const player = adaptivePlayerRef.current;
-    if (player?.isLive()) {
-      const range = player.seekRange();
-      video.currentTime = clamp(time, range.start, range.end);
-    } else {
-      video.currentTime = clamp(time, 0, video.duration || 0);
-    }
-  }, [adaptivePlayerRef]);
-
-  const seekBy = useCallback((amount: number) => {
-    const video = videoRef.current;
-    if (video) seekTo(video.currentTime + amount);
-  }, [seekTo]);
-
-  const setVolume = useCallback((value: number) => {
-    const video = videoRef.current;
-    if (!video) return;
-    const next = clamp(value, 0, 1);
-    video.volume = next;
-    video.muted = next === 0;
-    setVolumeState(next);
-    setMuted(next === 0);
-  }, []);
-
-  const toggleMute = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.muted = !video.muted;
-    setMuted(video.muted);
-  }, []);
-
   const setCaptionStyle = useCallback((patch: Partial<VelaCaptionStyle>) => {
     setCaptionStyleState((current) => ({ ...current, ...patch }));
   }, []);
@@ -245,13 +211,6 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
       selectTextTrack("off");
     }
   }, [selectTextTrack, selectedText, textOptions]);
-
-  const goLive = useCallback(() => {
-    const player = adaptivePlayerRef.current;
-    if (!player?.isLive()) return;
-    const range = player.seekRange();
-    seekTo(Math.max(range.start, range.end - 0.35));
-  }, [adaptivePlayerRef, seekTo]);
 
   const jumpChapter = useCallback((direction: 1 | -1) => {
     if (!resolvedChapters.length) return;
@@ -294,11 +253,8 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
   });
 
   useImperativeHandle(ref, () => ({
-    play: async () => {
-      setStarted(true);
-      await videoRef.current?.play();
-    },
-    pause: () => videoRef.current?.pause(),
+    play,
+    pause,
     seek: seekTo,
     setVolume,
     setQuality: selectQuality,
@@ -313,6 +269,8 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
     getState,
     goLive,
     jumpChapter,
+    pause,
+    play,
     seekTo,
     selectAudioTrack,
     selectQuality,
@@ -320,13 +278,6 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
     setCaptionStyle,
     setVolume,
   ]);
-
-  const onSpeedChange = useCallback((value: number) => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.playbackRate = value;
-    setSpeed(value);
-  }, []);
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     const tag = (event.target as HTMLElement | null)?.tagName;
@@ -345,26 +296,15 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
       event.preventDefault();
       setVolume(volume - 0.05);
     } else if (key === "j") seekBy(-10);
-    else if (key === "l" && event.shiftKey) setLoop((value) => !value);
+    else if (key === "l" && event.shiftKey) toggleLoop();
     else if (key === "l") seekBy(10);
     else if (key === "m") toggleMute();
     else if (key === "f") void toggleFullscreen();
     else if (key === "c") toggleCaptions();
     else if (key === "home") seekTo(timelineStart);
     else if (key === "end") isLive ? goLive() : seekTo(timelineEnd);
-    else if (event.key === ">") onSpeedChange(Math.min(2, speed + 0.25));
-    else if (event.key === "<") onSpeedChange(Math.max(0.5, speed - 0.25));
-  };
-
-  const updateRuntime = (video: HTMLVideoElement) => {
-    setCurrentTime(video.currentTime);
-    refreshLiveInfo();
-  };
-
-  const updateBuffered = () => {
-    const video = videoRef.current;
-    if (!video || !video.buffered.length) return;
-    setBuffered(video.buffered.end(video.buffered.length - 1));
+    else if (event.key === ">") setPlaybackRate(Math.min(2, speed + 0.25));
+    else if (event.key === "<") setPlaybackRate(Math.max(0.5, speed - 0.25));
   };
 
   return (
@@ -389,18 +329,13 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
         crossOrigin="anonymous"
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-        onEnded={() => setPlaying(false)}
-        onLoadedMetadata={(event) => {
-          if (Number.isFinite(event.currentTarget.duration)) setDuration(event.currentTarget.duration);
-          event.currentTarget.volume = volume;
-        }}
-        onDurationChange={(event) => {
-          if (Number.isFinite(event.currentTarget.duration)) setDuration(event.currentTarget.duration);
-        }}
-        onTimeUpdate={(event) => updateRuntime(event.currentTarget)}
-        onProgress={updateBuffered}
+        onPlay={handlePlay}
+        onPause={handlePause}
+        onEnded={handlePause}
+        onLoadedMetadata={(event) => handleLoadedMetadata(event.currentTarget)}
+        onDurationChange={(event) => handleDurationChange(event.currentTarget)}
+        onTimeUpdate={(event) => handleTimeUpdate(event.currentTarget)}
+        onProgress={handleProgress}
       >
         {!adaptive ? normalizedTracks.map((track) => (
           <track
@@ -461,7 +396,7 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
           onVolumeChange={setVolume}
           onGoLive={goLive}
           onToggleCaptions={toggleCaptions}
-          onToggleLoop={() => setLoop((value) => !value)}
+          onToggleLoop={toggleLoop}
           onToggleSettings={() => setSettingsOpen((value) => !value)}
           onPictureInPicture={togglePip}
           onFullscreen={toggleFullscreen}
@@ -481,11 +416,11 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
               currentChapterStart={currentChapter?.start ?? null}
               onSelectAudio={selectAudioTrack}
               onSelectQuality={selectQuality}
-              onSpeedChange={onSpeedChange}
+              onSpeedChange={setPlaybackRate}
               onSelectText={selectTextTrack}
               onCaptionStyleChange={setCaptionStyle}
               onSeekChapter={seekTo}
-              onToggleLoop={() => setLoop((value) => !value)}
+              onToggleLoop={toggleLoop}
             />
           ) : null}
         />
