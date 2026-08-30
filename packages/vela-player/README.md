@@ -8,7 +8,7 @@ Vela's framework-neutral controller, React component and Web Component distribut
 npm run package:build
 ```
 
-The package produces ESM/CJS bundles, declarations, and `dist/styles.css`.
+The package produces ESM/CJS bundles, declarations, and `dist/styles.css`. The stylesheet contains both the base player rules and the complete React presentation cascade used by the site/embed surface, so package consumers do not receive a reduced visual shell.
 
 ## Framework-neutral controller
 
