@@ -175,12 +175,38 @@ export function usePlaybackEngine({
 
     resetEngineState();
 
+    const syncNativeTextTracks = () => {
+      if (adaptive || controller.signal.aborted) return;
+      const elements = Array.from(media.querySelectorAll("track"));
+      const mediaTracks = Array.from(media.textTracks);
+      const options = normalizedTracks.map((track, configuredIndex) => {
+        const configuredTrack = elements[configuredIndex]?.track;
+        const actualIndex = configuredTrack ? mediaTracks.indexOf(configuredTrack) : -1;
+        return {
+          id: `native-${configuredIndex}`,
+          label: track.label,
+          language: track.language,
+          nativeIndex: actualIndex >= 0 ? actualIndex : configuredIndex,
+        } satisfies TextOption;
+      });
+      setTextOptions(options);
+      const active = options.find((option) => (
+        option.nativeIndex !== undefined && media.textTracks[option.nativeIndex]?.mode === "showing"
+      ));
+      setSelectedText(active?.id ?? "off");
+    };
+
     const handleNativeRuntimeError = () => {
       if (controller.signal.aborted || adaptive) return;
       setStatus("error");
       setErrorMessage(nativeMediaErrorMessage(media.error));
     };
-    if (!adaptive) media.addEventListener("error", handleNativeRuntimeError);
+    if (!adaptive) {
+      media.addEventListener("error", handleNativeRuntimeError);
+      media.textTracks.addEventListener("change", syncNativeTextTracks);
+      media.textTracks.addEventListener("addtrack", syncNativeTextTracks);
+      media.textTracks.addEventListener("removetrack", syncNativeTextTracks);
+    }
 
     async function load() {
       try {
@@ -204,16 +230,10 @@ export function usePlaybackEngine({
           });
         } else {
           media.src = src;
+          syncNativeTextTracks();
           media.load();
-          setTextOptions(normalizedTracks.map((track, nativeIndex) => ({
-            id: `native-${nativeIndex}`,
-            label: track.label,
-            language: track.language,
-            nativeIndex,
-          })));
           await waitForNativeMetadata(media, controller.signal);
-          const defaultTrackIndex = normalizedTracks.findIndex((track) => track.default);
-          setSelectedText(defaultTrackIndex >= 0 ? `native-${defaultTrackIndex}` : "off");
+          syncNativeTextTracks();
         }
 
         if (controller.signal.aborted) return;
@@ -246,7 +266,12 @@ export function usePlaybackEngine({
 
     return () => {
       controller.abort();
-      if (!adaptive) media.removeEventListener("error", handleNativeRuntimeError);
+      if (!adaptive) {
+        media.removeEventListener("error", handleNativeRuntimeError);
+        media.textTracks.removeEventListener("change", syncNativeTextTracks);
+        media.textTracks.removeEventListener("addtrack", syncNativeTextTracks);
+        media.textTracks.removeEventListener("removetrack", syncNativeTextTracks);
+      }
       void disposeAdaptive();
       media.pause();
       media.removeAttribute("src");

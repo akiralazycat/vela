@@ -232,7 +232,7 @@ export const VelaPlayerCore = forwardRef<VelaPlayerHandle, VelaPlayerProps>(func
         poster={poster}
         preload="metadata"
         playsInline
-        crossOrigin="anonymous"
+        crossOrigin={adaptive ? "anonymous" : undefined}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPlay={handlePlay}

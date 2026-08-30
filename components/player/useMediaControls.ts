@@ -67,8 +67,16 @@ export function useMediaControls({
   const togglePlay = useCallback(async () => {
     const video = videoRef.current;
     if (!video || status === "error") return;
-    if (video.paused) await play();
-    else video.pause();
+    if (!video.paused) {
+      video.pause();
+      return;
+    }
+    try {
+      await play();
+    } catch {
+      // UI toggles are best-effort; browsers may reject play() without a usable
+      // user activation. The imperative play() API still exposes that rejection.
+    }
   }, [play, status, videoRef]);
 
   const seekTo = useCallback((time: number) => {
