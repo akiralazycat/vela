@@ -1,7 +1,7 @@
 {
   "name": "@vela/player",
   "version": "0.3.0",
-  "description": "A quiet, themeable HLS/DASH player with React, iframe and Web Component APIs.",
+  "description": "A quiet, themeable HLS/DASH/MP4 player with React, iframe and Web Component APIs.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -25,7 +25,7 @@
     "./styles.css": "./dist/styles.css"
   },
   "files": ["dist", "README.md"],
-  "sideEffects": ["./dist/web-component.js", "./dist/styles.css"],
+  "sideEffects": ["./dist/web-component.js", "./dist/web-component.cjs", "./dist/styles.css"],
   "scripts": {
     "build": "tsup && cat ../../styles/player.css ../../styles/player-shell.css ../../styles/settings.css ../../styles/timeline.css ../../styles/responsive.css ../../styles/display-modes.css ../../styles/playback-signals.css ../../styles/audio-settings.css ../../styles/live-status.css ../../styles/timeline-live.css ../../styles/subtitle-accessibility.css > dist/styles.css",
     "prepack": "npm run build"

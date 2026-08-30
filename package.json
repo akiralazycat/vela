@@ -7,11 +7,11 @@
   ],
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run package:build && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "package:build": "npm run build --workspace @vela/player",
-    "check": "npm run typecheck && npm run package:build && npm run build"
+    "check": "npm run typecheck && npm run build"
   },
   "dependencies": {
     "next": "^16.0.0",

@@ -24,6 +24,9 @@ export type VelaEmbedOptions = {
   thumbnails?: string;
   origin?: string;
   loading?: "lazy" | "eager";
+  displayMode?: "default" | "minimal";
+  autoPlay?: boolean;
+  gestures?: boolean;
 };
 
 export type VelaCaptionPatch = {
@@ -36,10 +39,17 @@ export type VelaCaptionPatch = {
 };
 
 type Listener = (payload: unknown) => void;
+type QueuedCommand = { command: string; value?: unknown };
 
 const DEFAULT_ORIGIN = "https://vela.manabeakira.com";
 
+function optionalBoolean(value: string | undefined) {
+  if (value === undefined) return undefined;
+  return value !== "false" && value !== "0" && value !== "off";
+}
+
 function datasetOptions(element: HTMLElement): VelaEmbedOptions {
+  const displayMode = element.dataset.displayMode;
   return {
     src: element.dataset.src,
     type: (element.dataset.type as VelaEmbedOptions["type"]) || "auto",
@@ -48,6 +58,10 @@ function datasetOptions(element: HTMLElement): VelaEmbedOptions {
     accent: element.dataset.accent,
     thumbnails: element.dataset.thumbnails,
     origin: element.dataset.origin,
+    loading: element.dataset.loading === "eager" ? "eager" : undefined,
+    displayMode: displayMode === "minimal" || displayMode === "default" ? displayMode : undefined,
+    autoPlay: optionalBoolean(element.dataset.autoplay),
+    gestures: optionalBoolean(element.dataset.gestures),
   };
 }
 
@@ -57,6 +71,9 @@ export class VelaEmbed {
   readonly options: VelaEmbedOptions;
   private listeners = new Map<string, Set<Listener>>();
   private state: VelaEmbedState | null = null;
+  private ready = false;
+  private commandQueue: QueuedCommand[] = [];
+  private readonly playerOrigin: string;
 
   constructor(target: string | HTMLElement, options: VelaEmbedOptions = {}) {
     const element = typeof target === "string" ? document.querySelector<HTMLElement>(target) : target;
@@ -66,6 +83,7 @@ export class VelaEmbed {
 
     const origin = this.options.origin || DEFAULT_ORIGIN;
     const url = new URL("/embed", origin);
+    const parentOrigin = window.location.origin && window.location.origin !== "null" ? window.location.origin : "*";
     const params: Record<string, string | undefined> = {
       src: this.options.src,
       type: this.options.type,
@@ -73,26 +91,40 @@ export class VelaEmbed {
       title: this.options.title,
       accent: this.options.accent,
       thumbnails: this.options.thumbnails,
+      display: this.options.displayMode,
+      autoplay: this.options.autoPlay === undefined ? undefined : this.options.autoPlay ? "1" : "0",
+      gestures: this.options.gestures === undefined ? undefined : this.options.gestures ? "1" : "0",
+      parentOrigin,
     };
     Object.entries(params).forEach(([key, value]) => {
-      if (value) url.searchParams.set(key, value);
+      if (value !== undefined && value !== "") url.searchParams.set(key, value);
     });
+    this.playerOrigin = url.origin;
 
     this.iframe = document.createElement("iframe");
-    this.iframe.src = url.toString();
     this.iframe.title = this.options.title || "Vela video player";
     this.iframe.allow = "autoplay; fullscreen; picture-in-picture";
     this.iframe.allowFullscreen = true;
     this.iframe.loading = this.options.loading || "lazy";
     this.iframe.style.cssText = "display:block;width:100%;height:100%;border:0;background:#080908";
-    this.target.replaceChildren(this.iframe);
     this.handleMessage = this.handleMessage.bind(this);
     window.addEventListener("message", this.handleMessage);
+    this.iframe.src = url.toString();
+    this.target.replaceChildren(this.iframe);
+  }
+
+  private postCommand(payload: QueuedCommand) {
+    this.iframe.contentWindow?.postMessage({ type: "vela:command", ...payload }, this.playerOrigin);
   }
 
   private handleMessage(event: MessageEvent) {
-    if (event.source !== this.iframe.contentWindow || !event.data) return;
-    if (event.data.type === "vela:ready") this.emit("ready", null);
+    if (event.source !== this.iframe.contentWindow || event.origin !== this.playerOrigin || !event.data) return;
+    if (event.data.type === "vela:ready") {
+      this.ready = true;
+      const queued = this.commandQueue.splice(0);
+      queued.forEach((payload) => this.postCommand(payload));
+      this.emit("ready", null);
+    }
     if (event.data.type === "vela:state") {
       this.state = event.data.state as VelaEmbedState;
       this.emit("state", this.state);
@@ -116,7 +148,9 @@ export class VelaEmbed {
   }
 
   command(command: string, value?: unknown) {
-    this.iframe.contentWindow?.postMessage({ type: "vela:command", command, value }, "*");
+    const payload = { command, value };
+    if (this.ready) this.postCommand(payload);
+    else this.commandQueue.push(payload);
     return this;
   }
 
@@ -135,6 +169,8 @@ export class VelaEmbed {
 
   destroy() {
     window.removeEventListener("message", this.handleMessage);
+    this.ready = false;
+    this.commandQueue = [];
     this.listeners.clear();
     this.target.replaceChildren();
   }

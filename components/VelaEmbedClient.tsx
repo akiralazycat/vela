@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   VelaPlayer,
   type VelaCaptionStyle,
+  type VelaDisplayMode,
   type VelaPlayerHandle,
   type VelaPlayerState,
   type VelaSourceType,
@@ -16,6 +17,10 @@ type EmbedProps = {
   title?: string;
   accent?: string;
   thumbnailVtt?: string;
+  parentOrigin?: string;
+  displayMode?: VelaDisplayMode;
+  autoPlay?: boolean;
+  gestures?: boolean;
 };
 
 type VelaCommand = {
@@ -35,16 +40,38 @@ type VelaCommand = {
   value?: number | string | Partial<VelaCaptionStyle>;
 };
 
-export function VelaEmbedClient({ src, sourceType, poster, title, accent, thumbnailVtt }: EmbedProps) {
+function normalizeParentOrigin(value?: string) {
+  if (!value || value === "*") return "*";
+  try {
+    return new URL(value).origin;
+  } catch {
+    return "*";
+  }
+}
+
+export function VelaEmbedClient({
+  src,
+  sourceType,
+  poster,
+  title,
+  accent,
+  thumbnailVtt,
+  parentOrigin,
+  displayMode = "default",
+  autoPlay = false,
+  gestures = true,
+}: EmbedProps) {
   const playerRef = useRef<VelaPlayerHandle>(null);
+  const targetOrigin = useMemo(() => normalizeParentOrigin(parentOrigin), [parentOrigin]);
 
   useEffect(() => {
     const handler = (event: MessageEvent<VelaCommand>) => {
       if (event.source !== window.parent || event.data?.type !== "vela:command") return;
+      if (targetOrigin !== "*" && event.origin !== targetOrigin) return;
       const api = playerRef.current;
       if (!api) return;
       const { command, value } = event.data;
-      if (command === "play") void api.play();
+      if (command === "play") void api.play().catch(() => undefined);
       else if (command === "pause") api.pause();
       else if (command === "seek" && typeof value === "number") api.seek(value);
       else if (command === "volume" && typeof value === "number") api.setVolume(value);
@@ -58,10 +85,10 @@ export function VelaEmbedClient({ src, sourceType, poster, title, accent, thumbn
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, []);
+  }, [targetOrigin]);
 
   const emitState = (state: VelaPlayerState) => {
-    window.parent.postMessage({ type: "vela:state", state }, "*");
+    window.parent.postMessage({ type: "vela:state", state }, targetOrigin);
   };
 
   return (
@@ -75,7 +102,10 @@ export function VelaEmbedClient({ src, sourceType, poster, title, accent, thumbn
         eyebrow="VELA EMBED"
         accent={accent}
         thumbnailVtt={thumbnailVtt}
-        onReady={() => window.parent.postMessage({ type: "vela:ready" }, "*")}
+        displayMode={displayMode}
+        autoPlay={autoPlay}
+        gestures={gestures}
+        onReady={() => window.parent.postMessage({ type: "vela:ready" }, targetOrigin)}
         onStateChange={emitState}
       />
     </main>

@@ -1,8 +1,22 @@
 import { VelaEmbed, type VelaCaptionPatch, type VelaEmbedOptions, type VelaEmbedState } from "./index";
 
-const observed = ["src", "type", "poster", "title", "accent", "thumbnails", "origin"];
+const observed = [
+  "src",
+  "type",
+  "poster",
+  "title",
+  "accent",
+  "thumbnails",
+  "origin",
+  "loading",
+  "display-mode",
+  "autoplay",
+  "gestures",
+];
 
-export class VelaPlayerElement extends HTMLElement {
+const HTMLElementBase = (typeof HTMLElement === "undefined" ? class {} : HTMLElement) as typeof HTMLElement;
+
+export class VelaPlayerElement extends HTMLElementBase {
   static get observedAttributes() { return observed; }
   private controller: VelaEmbed | null = null;
   private frameHost: HTMLDivElement | null = null;
@@ -29,7 +43,14 @@ export class VelaPlayerElement extends HTMLElement {
     if (this.isConnected) this.mount();
   }
 
+  private optionalBoolean(name: string) {
+    if (!this.hasAttribute(name)) return undefined;
+    const value = this.getAttribute(name);
+    return value !== "false" && value !== "0" && value !== "off";
+  }
+
   private options(): VelaEmbedOptions {
+    const displayMode = this.getAttribute("display-mode");
     return {
       src: this.getAttribute("src") || undefined,
       type: (this.getAttribute("type") as VelaEmbedOptions["type"]) || "auto",
@@ -39,6 +60,9 @@ export class VelaPlayerElement extends HTMLElement {
       thumbnails: this.getAttribute("thumbnails") || undefined,
       origin: this.getAttribute("origin") || undefined,
       loading: this.getAttribute("loading") === "eager" ? "eager" : "lazy",
+      displayMode: displayMode === "minimal" || displayMode === "default" ? displayMode : undefined,
+      autoPlay: this.optionalBoolean("autoplay"),
+      gestures: this.optionalBoolean("gestures"),
     };
   }
 
@@ -64,7 +88,7 @@ export class VelaPlayerElement extends HTMLElement {
   getState(): VelaEmbedState | null { return this.controller?.getState() ?? null; }
 }
 
-if (typeof window !== "undefined" && !customElements.get("vela-player")) {
+if (typeof window !== "undefined" && typeof customElements !== "undefined" && !customElements.get("vela-player")) {
   customElements.define("vela-player", VelaPlayerElement);
 }
 

@@ -1,5 +1,5 @@
 import { VelaEmbedClient } from "@/components/VelaEmbedClient";
-import type { VelaSourceType } from "@/components/VelaPlayer";
+import type { VelaDisplayMode, VelaSourceType } from "@/components/VelaPlayer";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -13,6 +13,15 @@ function sourceType(value: string | undefined): VelaSourceType {
   return value === "hls" || value === "dash" || value === "mp4" ? value : "auto";
 }
 
+function displayMode(value: string | undefined): VelaDisplayMode {
+  return value === "minimal" ? "minimal" : "default";
+}
+
+function booleanParam(value: string | undefined, fallback: boolean) {
+  if (value === undefined) return fallback;
+  return value !== "0" && value !== "false" && value !== "off";
+}
+
 export default async function EmbedPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   return (
@@ -23,6 +32,10 @@ export default async function EmbedPage({ searchParams }: { searchParams: Search
       title={one(params.title)}
       accent={one(params.accent)}
       thumbnailVtt={one(params.thumbnails)}
+      parentOrigin={one(params.parentOrigin)}
+      displayMode={displayMode(one(params.display))}
+      autoPlay={booleanParam(one(params.autoplay), false)}
+      gestures={booleanParam(one(params.gestures), true)}
     />
   );
 }
