@@ -132,14 +132,14 @@ The custom element exposes player methods including `play()`, `pause()`, `seek()
 - `@vela/player/web-component` — `<vela-player>` custom element
 - `@vela/player/styles.css` — player-only CSS
 
-Build locally with:
+Verify the demo and the player SDK from the repository root with Node.js 22:
 
 ```bash
-npm install
-npm run typecheck
-npm run package:build
-npm run build
+npm install --no-package-lock
+npm run check
 ```
+
+`check` runs the type check, generates the SDK entry points, and builds the demo. Use the demo and the embed examples on this page to verify changes to the public SDK.
 
 The package is publish-ready in the repository but is intentionally **not published** by this project workflow. Publishing requires npm authentication and ownership of the selected package scope.
 
